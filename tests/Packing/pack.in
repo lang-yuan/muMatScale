@@ -1,0 +1,7 @@
+BaseFileName  test			/* Identify cases*/
+
+NSubblocks 1 2 3            		/* NO. of sub-blocks in x,y,z: int int int  */
+NCellsPerSB 12  8  4       		/* NO of Cells in each subblock: int int int   */
+FaceCtrl  0 0 0 0 0 0      		/* 0 = wrap or 1 = pad each face */
+
+CellSize 5.0e-06          		/* Grid size in Meters */
