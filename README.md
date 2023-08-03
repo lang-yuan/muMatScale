@@ -1,18 +1,18 @@
 # muMatScale
 
-Code for modeling solidification microstruture based on Cellular Automata method for binary/pseudo-binary alloys.
+Code for modeling solidification microstructure based on the Cellular Automata method for binary/pseudo-binary alloys.
 
 This code is derived from the open-source software uMatIC developed at the
 Imperial College London
 https://www.imperial.ac.uk/engineering-alloys/research/software
 
 ## Authors ##
-(Authors for the oringal version are not listed)
+(Authors for the original version are not listed)
 
 Lang Yuan, University of South Carolina, Email: langyuan@cec.sc.edu
 
 ## Contributors ##
-(Contributors for the oringal version are not listed)
+(Contributors for the original version are not listed)
 
 Jean-Luc Fattebert, Oak Ridge National Laboratory, Email: fattebertj@ornl.gov
 
@@ -29,7 +29,7 @@ The OpenMP offload implementation for GPU is described in:
 
 A.S. Sabau, L. Yuan, J.-L. Fattebert, J.A. Turner,
 "An OpenMP GPU-offload implementation of a non-equilibrium solidification
-cellular automata model for additive manufacturing"
+cellular automata model for additive manufacturing",
 Computer Physics Communications 284 (2023), 108605
 https://doi.org/10.1016/j.cpc.2022.108605
 
