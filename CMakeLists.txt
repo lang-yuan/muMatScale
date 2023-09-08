@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 project(muMatScale C)
 
-set(HDF5_USE_STATIC_LIBRARIES TRUE)
+set(HDF5_STATIC FALSE CACHE BOOL "Whether to link with static hdf5")
+if(${HDF5_STATIC})
+  set(HDF5_USE_STATIC_LIBRARIES TRUE)
+endif()
 
 find_package(MPI REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C)
