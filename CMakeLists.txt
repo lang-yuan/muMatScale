@@ -1,10 +1,22 @@
 cmake_minimum_required(VERSION 3.16)
 project(muMatScale C)
 
+set(HDF5_STATIC FALSE CACHE BOOL "Whether to link with static hdf5")
+if(${HDF5_STATIC})
+  set(HDF5_USE_STATIC_LIBRARIES TRUE)
+endif()
+
 find_package(MPI REQUIRED)
-find_package(HDF5 REQUIRED)
+find_package(HDF5 REQUIRED COMPONENTS C)
 find_package(ZLIB REQUIRED)
 find_package(OpenMP REQUIRED)
+
+if (${HDF5_FOUND})
+  message(STATUS "HDF5_LIBRARIES after search: ${HDF5_LIBRARIES}")
+  message(STATUS "HDF5_INCLUDE_DIRS: ${HDF5_INCLUDE_DIRS}")
+else(${HDF5_FOUND})
+  message(FATAL_ERROR "Required HDF5 package not found.")
+endif (${HDF5_FOUND})
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -41,11 +53,13 @@ add_executable(muMatScale ${src})
 
 set_property(TARGET muMatScale PROPERTY C_STANDARD 99)
 
+target_link_libraries(muMatScale PRIVATE hdf5::hdf5)
 target_link_libraries(muMatScale PRIVATE MPI::MPI_C)
-target_link_libraries(muMatScale PRIVATE hdf5)
 target_link_libraries(muMatScale PRIVATE ZLIB::ZLIB)
 target_link_libraries(muMatScale PRIVATE OpenMP::OpenMP_C)
 target_link_libraries(muMatScale PRIVATE m)
+
+target_include_directories(muMatScale PRIVATE ${HDF5_INCLUDE_DIRS})
 
 target_compile_definitions(muMatScale PRIVATE INDEX_SEP)
 target_compile_definitions(muMatScale PRIVATE NUC_SEP)
@@ -63,7 +77,7 @@ if(${BUILD_FOR_GPU})
     endif()
     message(STATUS "OpenMP_C_FLAGS: ${OpenMP_C_FLAGS}")
     message(STATUS "EXTRA_OpenMP_C_FLAGS: ${EXTRA_OpenMP_C_FLAGS}")
-    set_target_properties(muMatScale PROPERTIES COMPILE_FLAGS ${EXTRA_OpenMP_C_FLAGS})
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_OpenMP_C_FLAGS}")
     target_compile_definitions(muMatScale PRIVATE GPU_OMP)
     target_compile_definitions(muMatScale PRIVATE GPU_OMP_NUC)
     target_link_libraries(muMatScale PRIVATE ${EXTRA_OpenMP_C_FLAGS})
