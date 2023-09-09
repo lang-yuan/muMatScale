@@ -26,6 +26,7 @@ check_values(
     // check field with halo values
     int count = 0;
     double tol = 1.e-8;
+
     for (int k = k0; k <= k1; k++)
     {
         for (int j = j0; j <= j1; j++)
@@ -53,28 +54,35 @@ check_values(
 }
 
 // initialize field (no halo)
+#ifdef GPU_PACK
+#pragma omp declare target
+#endif
 void
 init_field(
     double *field,
-    const double value)
+    const double value,
+    const int dimx, const int dimy, const int dimz)
 {
-    memset(field, 0,
-           (bp->gsdimz + 2) * (bp->gsdimy + 2) * (bp->gsdimx +
-                                                  2) * sizeof(double));
-    for (int k = 1; k <= bp->gsdimz; k++)
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for
+#endif
+    for (int k = 1; k <= dimz; k++)
     {
-        for (int j = 1; j <= bp->gsdimy; j++)
+        for (int j = 1; j <= dimy; j++)
         {
-            for (int i = 1; i <= bp->gsdimx; i++)
+            for (int i = 1; i <= dimx; i++)
             {
                 int idx =
-                    k * (bp->gsdimy + 2) * (bp->gsdimx + 2) +
-                    j * (bp->gsdimx + 2) + i;
+                    k * (dimy + 2) * (dimx + 2) +
+                    j * (dimx + 2) + i;
                 field[idx] = value;
             }
         }
     }
 }
+#ifdef GPU_PACK
+#pragma omp end declare target
+#endif
 
 void
 exchange_data(
@@ -97,8 +105,18 @@ exchange_data(
     int nblocks;
     computeFaceInfo(face, &offset, &stride, &bsize, &nblocks);
 
+    printf("pack_field...\n");
+#ifdef GPU_PACK
+#pragma omp target
+#endif
+{
     pack_field(sizeof(double), field, stride, bsize, nblocks, offset,
                send_buffer);
+}
+
+#ifdef GPU_PACK
+#pragma omp target update from(send_buffer[0:nblocks*bsize])
+#endif
 
     MPI_Request req;
     MPI_Irecv(recv_buffer, dim2, MPI_DOUBLE, src, 0, MPI_COMM_WORLD, &req);
@@ -109,8 +127,16 @@ exchange_data(
     // recv data in halo cells
     computeHaloInfo(halo, &offset, &stride, &bsize, &nblocks);
 
+    printf("unpack_field...\n");
+#ifdef GPU_PACK
+#pragma omp target update to(recv_buffer[0:nblocks*bsize])
+#pragma omp target
+#endif
+{
     unpack_field(sizeof(double), field, stride, bsize, nblocks, offset,
                  recv_buffer);
+}
+
 }
 
 int
@@ -149,10 +175,16 @@ main(
     double *send_buffer = malloc(dim2 * sizeof(double));
     double *recv_buffer = malloc(dim2 * sizeof(double));
 
+#ifdef GPU_PACK
+#pragma omp target enter data map(alloc:field[:dim3])
+#pragma omp target enter data map(alloc:send_buffer[:dim2])
+#pragma omp target enter data map(alloc:recv_buffer[:dim2])
+#endif
+
     determine_3dneighbors(iproc, neighbors);
 
     // initialize field (no halo)
-    const double value = 3.33;
+    double value = 3.33;
 
     for (int i = 0; i < dim2; i++)
         send_buffer[i] = 1.11;
@@ -161,9 +193,20 @@ main(
 
     int ret = 0;
 
+    int dimx = bp->gsdimx;
+    int dimy = bp->gsdimy;
+    int dimz = bp->gsdimz;
+
     // check halo fill one direction at a time
     {
-        init_field(field, value);
+        if (iproc == 0)
+           printf("init_field...\n");
+#ifdef GPU_PACK
+#pragma omp target
+#endif
+{
+        init_field(field, value, dimx, dimy, dimz);
+}
         if (iproc == 0)
             printf("Check FACE_TOP -> FACE_BOTTOM\n");
         // send data from face cells
@@ -173,11 +216,23 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
+#ifdef GPU_PACK
+#pragma omp target update from(field[:dim3])
+#endif
+
+        if (iproc == 0)
+           printf("check_values()...\n");
         ret = check_values(field, value, 1, bp->gsdimx, 1, bp->gsdimy, 0, 0);
     }
 
+    value += 1.;
     {
-        init_field(field, value);
+#ifdef GPU_PACK
+#pragma omp target
+#endif
+{
+        init_field(field, value, dimx, dimy, dimz);
+}
         if (iproc == 0)
             printf("Check FACE_BOTTOM -> FACE_TOP\n");
         // send data from face cells
@@ -187,13 +242,22 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
+#ifdef GPU_PACK
+#pragma omp target update from(field[:dim3])
+#endif
         ret +=
             check_values(field, value, 1, bp->gsdimx, 1, bp->gsdimy,
                          bp->gsdimz + 1, bp->gsdimz + 1);
     }
 
+    value += 1.;
     {
-        init_field(field, value);
+#ifdef GPU_PACK
+#pragma omp target
+#endif
+{
+        init_field(field, value, dimx, dimy, dimz);
+}
         if (iproc == 0)
             printf("Check FACE_LEFT -> FACE_RIGHT\n");
         // send data from face cells
@@ -203,13 +267,22 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
+#ifdef GPU_PACK
+#pragma omp target update from(field[:dim3])
+#endif
         ret +=
             check_values(field, value, bp->gsdimx + 1, bp->gsdimx + 1, 1,
                          bp->gsdimy, 1, bp->gsdimz);
     }
 
+    value += 1.;
     {
-        init_field(field, value);
+#ifdef GPU_PACK
+#pragma omp target
+#endif
+{
+        init_field(field, value, dimx, dimy, dimz);
+}
         if (iproc == 0)
             printf("Check FACE_RIGHT -> FACE_LEFT\n");
         // send data from face cells
@@ -219,10 +292,20 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
+#ifdef GPU_PACK
+#pragma omp target update from(field[:dim3])
+#endif
         ret += check_values(field, value, 0, 0, 1, bp->gsdimy, 1, bp->gsdimz);
     }
+
+    value += 1.;
     {
-        init_field(field, value);
+#ifdef GPU_PACK
+#pragma omp target
+#endif
+{
+        init_field(field, value, dimx, dimy, dimz);
+}
         if (iproc == 0)
             printf("Check FACE_FRONT -> FACE_BACK\n");
         // send data from face cells
@@ -232,12 +315,22 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
+#ifdef GPU_PACK
+#pragma omp target update from(field[:dim3])
+#endif
         ret =
             check_values(field, value, 1, bp->gsdimx, bp->gsdimy + 1,
                          bp->gsdimy + 1, 1, bp->gsdimz);
     }
+
+    value += 1.;
     {
-        init_field(field, value);
+#ifdef GPU_PACK
+#pragma omp target
+#endif
+{
+        init_field(field, value, dimx, dimy, dimz);
+}
         if (iproc == 0)
             printf("Check FACE_BACK -> FACE_FRONT\n");
         // send data from face cells
@@ -247,9 +340,17 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
+#ifdef GPU_PACK
+#pragma omp target update from(field[:dim3])
+#endif
         ret = check_values(field, value, 1, bp->gsdimx, 0, 0, 1, bp->gsdimz);
     }
 
+#ifdef GPU_PACK
+#pragma omp target exit data map(delete:field[:dim3])
+#pragma omp target exit data map(delete:send_buffer[:dim2])
+#pragma omp target exit data map(delete:recv_buffer[:dim2])
+#endif
     free(recv_buffer);
     free(send_buffer);
     free(field);

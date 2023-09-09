@@ -9,6 +9,9 @@
 
 #include <stdlib.h>
 
+#ifdef GPU_PACK
+#pragma omp declare target
+#endif
 
 // stride: distance between begining of two blocks of data
 // bsize: number of int/double per block of data
@@ -21,9 +24,13 @@ pack_double(
     const int offset,
     double *buffer)
 {
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
             buffer[i * bsize + j] = data[offset + i * stride + j];
+
 }
 
 void
@@ -35,9 +42,13 @@ pack_int(
     const int offset,
     int *buffer)
 {
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
             buffer[i * bsize + j] = data[offset + i * stride + j];
+
 }
 
 void
@@ -52,6 +63,9 @@ pack_3double(
     const int offset3 = 3 * offset;
     const int stride3 = 3 * stride;
     const int bsize3 = 3 * bsize;
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize3; j++)
         {
@@ -84,7 +98,9 @@ pack_field(
                          (double *) buffer);
             break;
         default:
+#ifndef GPU_PACK
             printf("error: datasize %zu not supported\n", datasize);
+#endif
             break;
     }
 }
@@ -98,6 +114,9 @@ unpack_double(
     const int offset,
     double *buffer)
 {
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
             data[offset + i * stride + j] = buffer[i * bsize + j];
@@ -112,6 +131,9 @@ unpack_int(
     const int offset,
     int *buffer)
 {
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
             data[offset + i * stride + j] = buffer[i * bsize + j];
@@ -130,6 +152,9 @@ unpack_3double(
     const int stride3 = 3 * stride;
     const int bsize3 = 3 * bsize;
 
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize3; j++)
         {
@@ -162,10 +187,16 @@ unpack_field(
                            (double *) buffer);
             break;
         default:
+#ifndef GPU_PACK
             printf("error: datasize %zu not supported\n", datasize);
+#endif
             break;
     }
 }
+
+#ifdef GPU_PACK
+#pragma omp end declare target
+#endif
 
 void
 computeHaloInfo(
