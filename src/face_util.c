@@ -64,7 +64,7 @@ createCommTypes(
 static int
 Recv_Plane(
     void *data,
-    commTypes_t * t,
+    size_t datasize,
     int halo,
     int from,
     int tag,
@@ -78,7 +78,7 @@ Recv_Plane(
     int nblocks;
     computeHaloInfo(halo, &offset, &stride, &bsize, &nblocks);
 
-    int sizeb = bsize * nblocks * t->dsize;
+    int sizeb = bsize * nblocks * datasize;
     return MPI_Irecv(rbuffer[halo], sizeb, MPI_BYTE, from, tag, mpi_comm_new,
                      req);
 }
@@ -86,7 +86,7 @@ Recv_Plane(
 void
 unpack_plane(
     void *data,
-    commTypes_t * t,
+    size_t datasize,
     int halo,
     void *rbuffer[6])
 {
@@ -98,7 +98,7 @@ unpack_plane(
     int nblocks;
     computeHaloInfo(halo, &offset, &stride, &bsize, &nblocks);
 
-    unpack_field(t->dsize, data, stride, bsize, nblocks, offset,
+    unpack_field(datasize, data, stride, bsize, nblocks, offset,
                  rbuffer[halo]);
 }
 
@@ -117,7 +117,7 @@ static int
 RecvHalosNB(
     void *data,
     int data_key,
-    commTypes_t * t,
+    size_t datasize,
     int connMap[][2],
     void *rbuf[6],
     MPI_Request * reqs)
@@ -136,7 +136,7 @@ RecvHalosNB(
                    MKTAG(0, data_key, gface_reverse[face]), face);
             timing(COMPUTATION, timer_elapsed());
 
-            err = Recv_Plane(data, t, face, rank,
+            err = Recv_Plane(data, datasize, face, rank,
                              MKTAG(0, data_key,
                                    gface_reverse[face]), rbuf,
                              &reqs[n_req++]);
@@ -166,7 +166,7 @@ RecvHalosNB(
 static int
 Send_Plane(
     void *data,
-    commTypes_t * t,
+    size_t datasize,
     int face,
     int to,
     int tag,
@@ -180,9 +180,9 @@ Send_Plane(
     int nblocks;
     computeFaceInfo(face, &offset, &stride, &bsize, &nblocks);
 
-    pack_field(t->dsize, data, stride, bsize, nblocks, offset, sbuffer[face]);
+    pack_field(datasize, data, stride, bsize, nblocks, offset, sbuffer[face]);
 
-    int sizeb = bsize * nblocks * t->dsize;
+    int sizeb = bsize * nblocks * datasize;
     return MPI_Isend(sbuffer[face], sizeb, MPI_BYTE, to, tag, mpi_comm_new,
                      req);
 }
@@ -202,7 +202,7 @@ int
 SendFacesNB(
     void *data,
     int data_key,
-    commTypes_t * t,
+    size_t datasize,
     int connMap[][2],
     void *sbuf[6],
     MPI_Request * reqs)
@@ -220,7 +220,7 @@ SendFacesNB(
                    rank, MKTAG(0, data_key, face), face);
             timing(COMPUTATION, timer_elapsed());
 
-            err = Send_Plane(data, t, face, rank,
+            err = Send_Plane(data, datasize, face, rank,
                              MKTAG(0, data_key, face), sbuf, &reqs[n_req++]);
             timing(COMMUNICATION, timer_elapsed());
             if (err)
@@ -250,15 +250,15 @@ int
 SendRecvHalosNB(
     void *data,
     int data_key,
-    commTypes_t * t,
+    size_t datasize,
     int connMap[][2],
     void *sbuf[6],
     void *rbuf[6],
     MPI_Request * reqs)
 {
     int n_req = 0;
-    n_req += RecvHalosNB(data, data_key, t, connMap, rbuf, &reqs[0]);
-    n_req += SendFacesNB(data, data_key, t, connMap, sbuf, &reqs[n_req]);
+    n_req += RecvHalosNB(data, data_key, datasize, connMap, rbuf, &reqs[0]);
+    n_req += SendFacesNB(data, data_key, datasize, connMap, sbuf, &reqs[n_req]);
 
     return n_req;
 }

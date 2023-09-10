@@ -43,7 +43,6 @@ SB_struct *lsp;
 
 typedef struct variable_registration
 {
-    commTypes_t *types;
     MPI_Request *reqs;
     int nreq;
     size_t datasize;
@@ -56,14 +55,12 @@ static variable_registration var_regs[1 << TAG_DATA_KEY_SHIFT];
 
 static int
 registerCommInfo(
-    commTypes_t * t,
     size_t datasize)
 {
     assert(var_count < (1 << TAG_DATA_KEY_SHIFT));
     int varnum = var_count++;
 
     variable_registration *v = &var_regs[varnum];
-    v->types = t;
     v->reqs = NULL;
     v->nreq = 0;
     v->datasize = datasize;
@@ -99,7 +96,7 @@ FinishExchangeForVar(
         // A rank of less than 0 means that it isn't assigned
         if (rank >= 0 && rank != iproc)
         {
-            unpack_plane(data, v->types, face, v->rbuf);
+            unpack_plane(data, v->datasize, face, v->rbuf);
         }
     }
 
@@ -155,7 +152,7 @@ ExchangeFacesForVar(
         /* We pass subblock_num, rather than subblockid, as that number is much
          * less.  On some systems, there is a limited number of tags available.
          */
-        v->nreq = SendRecvHalosNB(d, variable_key, v->types,
+        v->nreq = SendRecvHalosNB(d, variable_key, v->datasize,
                                   s->neighbors, v->sbuf, v->rbuf,
                                   &v->reqs[0]);
     }
@@ -187,21 +184,19 @@ doiteration(
 
     if (first_time)
     {
-        grain_var = registerCommInfo(&bp->intCommTypes, sizeof(int));
-        d_var = registerCommInfo(&bp->floatCommTypes, sizeof(double));
-        cl_var = registerCommInfo(&bp->floatCommTypes, sizeof(double));
-        fs_var = registerCommInfo(&bp->floatCommTypes, sizeof(double));
-        dc_var = registerCommInfo(&bp->decenteredCommTypes,
-                                  3 * sizeof(double));
+        grain_var = registerCommInfo(sizeof(int));
+        d_var = registerCommInfo(sizeof(double));
+        cl_var = registerCommInfo(sizeof(double));
+        fs_var = registerCommInfo(sizeof(double));
+        dc_var = registerCommInfo(3 * sizeof(double));
 
         if (bp->fluidflow)
         {
-            cell_u_var = registerCommInfo(&bp->floatCommTypes,
-                                          sizeof(double));
+            cell_u_var = registerCommInfo(sizeof(double));
             cell_v_var =
-                registerCommInfo(&bp->floatCommTypes, sizeof(double));
+                registerCommInfo(sizeof(double));
             cell_w_var =
-                registerCommInfo(&bp->floatCommTypes, sizeof(double));
+                registerCommInfo(sizeof(double));
         }
 
         gsolid_volume = 0;
