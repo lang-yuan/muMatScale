@@ -218,8 +218,6 @@ main(
 
     prepareIO();
 
-    create_MPIdtypes();
-
     if (iproc == 0)
     {
         gsubblock_list = ll_init(NULL, NULL);
@@ -294,8 +292,6 @@ main(
     if (iproc == 0)
         printf("Elapsed time:  %lu iterations, %lg sec\n",
                bp->timestep, t_end - gStartTime);
-
-    destroy_MPIdtypes();
 
     if (iproc == 0)
         ll_destroy(gsubblock_list);

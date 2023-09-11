@@ -184,11 +184,6 @@ void sbcoords_from_sbID(
     size_t * y,
     size_t * z);
 
-void create_MPIdtypes(
-    );
-void destroy_MPIdtypes(
-    );
-
 /**
  * Sets up MPI datatypes used
  */

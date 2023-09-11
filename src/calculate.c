@@ -43,8 +43,6 @@ SB_struct *lsp;
 
 typedef struct variable_registration
 {
-    size_t offset;
-    commTypes_t *types;
     MPI_Request *reqs;
     int nreq;
     size_t datasize;
@@ -57,16 +55,12 @@ static variable_registration var_regs[1 << TAG_DATA_KEY_SHIFT];
 
 static int
 registerCommInfo(
-    size_t offset,
-    commTypes_t * t,
     size_t datasize)
 {
     assert(var_count < (1 << TAG_DATA_KEY_SHIFT));
     int varnum = var_count++;
 
     variable_registration *v = &var_regs[varnum];
-    v->offset = offset;
-    v->types = t;
     v->reqs = NULL;
     v->nreq = 0;
     v->datasize = datasize;
@@ -81,7 +75,7 @@ registerCommInfo(
 
 static void
 FinishExchangeForVar(
-    int variable_key)
+    int variable_key, void* data)
 {
     variable_registration *v = &var_regs[variable_key];
 
@@ -96,14 +90,13 @@ FinishExchangeForVar(
 
     // unpack received data
     SB_struct *s = lsp;
-    double *data = (*(double **) (((char *) s) + v->offset));
     for (int face = 0; face < NUM_NEIGHBORS; face++)
     {
         int rank = s->neighbors[face][0];
         // A rank of less than 0 means that it isn't assigned
         if (rank >= 0 && rank != iproc)
         {
-            unpack_plane(data, v->types, face, v->rbuf);
+            unpack_plane(data, v->datasize, face, v->rbuf);
         }
     }
 
@@ -111,7 +104,7 @@ FinishExchangeForVar(
 
 static void
 ExchangeFacesForVar(
-    int variable_key)
+    int variable_key, void* d)
 {
     /* Allocate list of MPI Requests.  One for each potential Send and one for
      * each potential Recv that we might do. */
@@ -151,17 +144,15 @@ ExchangeFacesForVar(
     // Post Receives & Sends
     {
         SB_struct *s = lsp;
-        dwrite(DEBUG_TASK_CTRL, "Updating variable [0x%lx] for block %d\n",
-               v->offset, s->subblockid);
-
-        double *d = (*(double **) (((char *) s) + v->offset));
+        dwrite(DEBUG_TASK_CTRL, "Updating variable for block %d\n",
+               s->subblockid);
 
         timing(COMPUTATION, timer_elapsed());
 
         /* We pass subblock_num, rather than subblockid, as that number is much
          * less.  On some systems, there is a limited number of tags available.
          */
-        v->nreq = SendRecvHalosNB(d, variable_key, v->types,
+        v->nreq = SendRecvHalosNB(d, variable_key, v->datasize,
                                   s->neighbors, v->sbuf, v->rbuf,
                                   &v->reqs[0]);
     }
@@ -193,29 +184,19 @@ doiteration(
 
     if (first_time)
     {
-        grain_var = registerCommInfo(offsetof(SB_struct, gr),
-                                     &bp->intCommTypes, sizeof(int));
-        d_var = registerCommInfo(offsetof(SB_struct, d),
-                                 &bp->floatCommTypes, sizeof(double));
-        cl_var = registerCommInfo(offsetof(SB_struct, cl),
-                                  &bp->floatCommTypes, sizeof(double));
-        fs_var = registerCommInfo(offsetof(SB_struct, fs),
-                                  &bp->floatCommTypes, sizeof(double));
-        dc_var = registerCommInfo(offsetof(SB_struct, dc),
-                                  &bp->decenteredCommTypes,
-                                  3 * sizeof(double));
+        grain_var = registerCommInfo(sizeof(int));
+        d_var = registerCommInfo(sizeof(double));
+        cl_var = registerCommInfo(sizeof(double));
+        fs_var = registerCommInfo(sizeof(double));
+        dc_var = registerCommInfo(3 * sizeof(double));
 
         if (bp->fluidflow)
         {
-            cell_u_var = registerCommInfo(offsetof(SB_struct, cell_u),
-                                          &bp->floatCommTypes,
-                                          sizeof(double));
+            cell_u_var = registerCommInfo(sizeof(double));
             cell_v_var =
-                registerCommInfo(offsetof(SB_struct, cell_v),
-                                 &bp->floatCommTypes, sizeof(double));
+                registerCommInfo(sizeof(double));
             cell_w_var =
-                registerCommInfo(offsetof(SB_struct, cell_w),
-                                 &bp->floatCommTypes, sizeof(double));
+                registerCommInfo(sizeof(double));
         }
 
         gsolid_volume = 0;
@@ -228,28 +209,28 @@ doiteration(
         {
             cl_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(cl_var);
+            ExchangeFacesForVar(cl_var, lsp->cl);
         }
 
         // start communication for fs
         {
             fs_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(fs_var);
+            ExchangeFacesForVar(fs_var, lsp->fs);
         }
 
         // start communication for dc
         {
             dc_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(dc_var);
+            ExchangeFacesForVar(dc_var, lsp->dc);
         }
 
         // start communication for d
         {
             d_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(d_var);
+            ExchangeFacesForVar(d_var, lsp->d);
         }
 
         // Produces:  temperature
@@ -277,12 +258,12 @@ doiteration(
         }
 
         {
-            FinishExchangeForVar(cl_var);
+            FinishExchangeForVar(cl_var, lsp->cl);
             cl_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }
         {
-            FinishExchangeForVar(fs_var);
+            FinishExchangeForVar(fs_var, lsp->fs);
             fs_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }
@@ -318,20 +299,20 @@ doiteration(
 
             gr_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(grain_var);
-            FinishExchangeForVar(grain_var);
+            ExchangeFacesForVar(grain_var, lsp->gr);
+            FinishExchangeForVar(grain_var, lsp->gr);
             gr_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }
         // finish communications for dc
         {
-            FinishExchangeForVar(dc_var);
+            FinishExchangeForVar(dc_var, lsp->dc);
             dc_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }
         // finish communications for d
         {
-            FinishExchangeForVar(d_var);
+            FinishExchangeForVar(d_var, lsp->d);
             d_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }

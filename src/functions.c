@@ -351,24 +351,6 @@ sbID_from_realcoords(
     return sbID_from_sbcoords(ix, iy, iz);
 }
 
-void
-create_MPIdtypes(
-    )
-{
-    createCommTypes(MPI_INT, &bp->intCommTypes);
-    createCommTypes(MPI_DOUBLE, &bp->floatCommTypes);
-    MPI_Type_vector(1, 3, 1, MPI_DOUBLE, &bp->MPI_DECENTERED);
-    MPI_Type_commit(&bp->MPI_DECENTERED);
-    createCommTypes(bp->MPI_DECENTERED, &bp->decenteredCommTypes);
-}
-
-void
-destroy_MPIdtypes(
-    )
-{
-    MPI_Type_free(&bp->MPI_DECENTERED);
-}
-
 /**
  * Sets up MPI datatypes used
  */

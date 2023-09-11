@@ -59,7 +59,7 @@ void destroyCommTypes(
 int SendRecvHalosNB(
     void *data,
     int data_key,
-    commTypes_t * t,
+    size_t datasize,
     int connMap[][2],
     void *sbuf[6],
     void *rbuf[6],
@@ -67,7 +67,7 @@ int SendRecvHalosNB(
 
 void unpack_plane(
     void *data,
-    commTypes_t * t,
+    size_t datasize,
     int halo,
     void *rbuf[6]);
 

@@ -279,11 +279,7 @@ typedef struct bbstruct
     uint64_t timestep;
 
     // Communication Types
-    commTypes_t intCommTypes;
-    commTypes_t floatCommTypes;
     MPI_Datatype MPI_DECENTERED;
-    commTypes_t decenteredCommTypes;
-
 
     // Constants
     calc_type_t calc_type;
