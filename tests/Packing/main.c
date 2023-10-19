@@ -26,6 +26,11 @@ check_values(
     // check field with halo values
     int count = 0;
     double tol = 1.e-8;
+    int dim3 = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
+
+#ifdef GPU_PACK
+#pragma omp target update from(field[:dim3])
+#endif
 
     for (int k = k0; k <= k1; k++)
     {
@@ -54,9 +59,6 @@ check_values(
 }
 
 // initialize field (no halo)
-#ifdef GPU_PACK
-#pragma omp declare target
-#endif
 void
 init_field(
     double *field,
@@ -80,9 +82,6 @@ init_field(
         }
     }
 }
-#ifdef GPU_PACK
-#pragma omp end declare target
-#endif
 
 void
 exchange_data(
@@ -106,17 +105,8 @@ exchange_data(
     computeFaceInfo(face, &offset, &stride, &bsize, &nblocks);
 
     printf("pack_field...\n");
-#ifdef GPU_PACK
-#pragma omp target
-#endif
-{
     pack_field(sizeof(double), field, stride, bsize, nblocks, offset,
                send_buffer);
-}
-
-#ifdef GPU_PACK
-#pragma omp target update from(send_buffer[0:nblocks*bsize])
-#endif
 
     MPI_Request req;
     MPI_Irecv(recv_buffer, dim2, MPI_DOUBLE, src, 0, MPI_COMM_WORLD, &req);
@@ -128,14 +118,8 @@ exchange_data(
     computeHaloInfo(halo, &offset, &stride, &bsize, &nblocks);
 
     printf("unpack_field...\n");
-#ifdef GPU_PACK
-#pragma omp target update to(recv_buffer[0:nblocks*bsize])
-#pragma omp target
-#endif
-{
     unpack_field(sizeof(double), field, stride, bsize, nblocks, offset,
                  recv_buffer);
-}
 
 }
 
@@ -145,10 +129,14 @@ main(
     char *argv[])
 {
     char *ctrl_fname = argv[1];
+    int ret = 0;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     MPI_Comm_rank(MPI_COMM_WORLD, &iproc);
+
+    if (iproc == 0)
+        printf("Test packing functions...\n");
 
     xmalloc(bp, BB_struct, 1);
 
@@ -163,6 +151,8 @@ main(
     int dim3 = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
     if (iproc == 0)
         printf("Local array size = %d\n", dim3);
+
+    MPI_Barrier(MPI_COMM_WORLD);
 
     double *field = malloc(dim3 * sizeof(double));
     int dimxy = (bp->gsdimx + 2) * (bp->gsdimy + 2);
@@ -181,6 +171,9 @@ main(
 #pragma omp target enter data map(alloc:recv_buffer[:dim2])
 #endif
 
+    if (iproc == 0)
+        printf("Determine neighbors...\n");
+
     determine_3dneighbors(iproc, neighbors);
 
     // initialize field (no halo)
@@ -191,8 +184,6 @@ main(
     for (int i = 0; i < dim2; i++)
         recv_buffer[i] = 2.22;
 
-    int ret = 0;
-
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
@@ -201,13 +192,8 @@ main(
     {
         if (iproc == 0)
            printf("init_field...\n");
-#ifdef GPU_PACK
-#pragma omp target
-#endif
-{
         init_field(field, value, dimx, dimy, dimz);
-}
-        if (iproc == 0)
+       if (iproc == 0)
             printf("Check FACE_TOP -> FACE_BOTTOM\n");
         // send data from face cells
         int face = FACE_TOP;
@@ -216,10 +202,6 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
-#ifdef GPU_PACK
-#pragma omp target update from(field[:dim3])
-#endif
-
         if (iproc == 0)
            printf("check_values()...\n");
         ret = check_values(field, value, 1, bp->gsdimx, 1, bp->gsdimy, 0, 0);
@@ -227,12 +209,8 @@ main(
 
     value += 1.;
     {
-#ifdef GPU_PACK
-#pragma omp target
-#endif
-{
         init_field(field, value, dimx, dimy, dimz);
-}
+
         if (iproc == 0)
             printf("Check FACE_BOTTOM -> FACE_TOP\n");
         // send data from face cells
@@ -242,9 +220,6 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
-#ifdef GPU_PACK
-#pragma omp target update from(field[:dim3])
-#endif
         ret +=
             check_values(field, value, 1, bp->gsdimx, 1, bp->gsdimy,
                          bp->gsdimz + 1, bp->gsdimz + 1);
@@ -252,12 +227,7 @@ main(
 
     value += 1.;
     {
-#ifdef GPU_PACK
-#pragma omp target
-#endif
-{
         init_field(field, value, dimx, dimy, dimz);
-}
         if (iproc == 0)
             printf("Check FACE_LEFT -> FACE_RIGHT\n");
         // send data from face cells
@@ -267,9 +237,6 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
-#ifdef GPU_PACK
-#pragma omp target update from(field[:dim3])
-#endif
         ret +=
             check_values(field, value, bp->gsdimx + 1, bp->gsdimx + 1, 1,
                          bp->gsdimy, 1, bp->gsdimz);
@@ -277,12 +244,7 @@ main(
 
     value += 1.;
     {
-#ifdef GPU_PACK
-#pragma omp target
-#endif
-{
         init_field(field, value, dimx, dimy, dimz);
-}
         if (iproc == 0)
             printf("Check FACE_RIGHT -> FACE_LEFT\n");
         // send data from face cells
@@ -292,20 +254,12 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
-#ifdef GPU_PACK
-#pragma omp target update from(field[:dim3])
-#endif
         ret += check_values(field, value, 0, 0, 1, bp->gsdimy, 1, bp->gsdimz);
     }
 
     value += 1.;
     {
-#ifdef GPU_PACK
-#pragma omp target
-#endif
-{
         init_field(field, value, dimx, dimy, dimz);
-}
         if (iproc == 0)
             printf("Check FACE_FRONT -> FACE_BACK\n");
         // send data from face cells
@@ -315,9 +269,6 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
-#ifdef GPU_PACK
-#pragma omp target update from(field[:dim3])
-#endif
         ret =
             check_values(field, value, 1, bp->gsdimx, bp->gsdimy + 1,
                          bp->gsdimy + 1, 1, bp->gsdimz);
@@ -325,12 +276,7 @@ main(
 
     value += 1.;
     {
-#ifdef GPU_PACK
-#pragma omp target
-#endif
-{
         init_field(field, value, dimx, dimy, dimz);
-}
         if (iproc == 0)
             printf("Check FACE_BACK -> FACE_FRONT\n");
         // send data from face cells
@@ -340,9 +286,6 @@ main(
         exchange_data(face, halo, field, send_buffer, recv_buffer);
 
         // check field with halo values
-#ifdef GPU_PACK
-#pragma omp target update from(field[:dim3])
-#endif
         ret = check_values(field, value, 1, bp->gsdimx, 0, 0, 1, bp->gsdimz);
     }
 
