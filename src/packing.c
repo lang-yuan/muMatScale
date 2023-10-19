@@ -9,10 +9,6 @@
 
 #include <stdlib.h>
 
-#ifdef GPU_PACK
-#pragma omp declare target
-#endif
-
 // stride: distance between begining of two blocks of data
 // bsize: number of int/double per block of data
 void
@@ -31,6 +27,9 @@ pack_double(
         for (int j = 0; j < bsize; j++)
             buffer[i * bsize + j] = data[offset + i * stride + j];
 
+#ifdef GPU_PACK
+#pragma omp target update from(buffer[0:nblocks*bsize])
+#endif
 }
 
 void
@@ -49,6 +48,9 @@ pack_int(
         for (int j = 0; j < bsize; j++)
             buffer[i * bsize + j] = data[offset + i * stride + j];
 
+#ifdef GPU_PACK
+#pragma omp target update from(buffer[0:nblocks*bsize])
+#endif
 }
 
 void
@@ -71,6 +73,10 @@ pack_3double(
         {
             buffer[i * bsize3 + j] = data[offset3 + i * stride3 + j];
         }
+
+#ifdef GPU_PACK
+#pragma omp target update from(buffer[0:nblocks*bsize])
+#endif
 }
 
 void
@@ -98,9 +104,7 @@ pack_field(
                          (double *) buffer);
             break;
         default:
-#ifndef GPU_PACK
             printf("error: datasize %zu not supported\n", datasize);
-#endif
             break;
     }
 }
@@ -115,6 +119,7 @@ unpack_double(
     double *buffer)
 {
 #ifdef GPU_PACK
+#pragma omp target update to(buffer[0:nblocks*bsize])
 #pragma omp target teams distribute parallel for
 #endif
     for (int i = 0; i < nblocks; i++)
@@ -132,6 +137,7 @@ unpack_int(
     int *buffer)
 {
 #ifdef GPU_PACK
+#pragma omp target update to(buffer[0:nblocks*bsize])
 #pragma omp target teams distribute parallel for
 #endif
     for (int i = 0; i < nblocks; i++)
@@ -153,6 +159,7 @@ unpack_3double(
     const int bsize3 = 3 * bsize;
 
 #ifdef GPU_PACK
+#pragma omp target update to(buffer[0:3*nblocks*bsize])
 #pragma omp target teams distribute parallel for
 #endif
     for (int i = 0; i < nblocks; i++)
@@ -187,16 +194,10 @@ unpack_field(
                            (double *) buffer);
             break;
         default:
-#ifndef GPU_PACK
             printf("error: datasize %zu not supported\n", datasize);
-#endif
             break;
     }
 }
-
-#ifdef GPU_PACK
-#pragma omp end declare target
-#endif
 
 void
 computeHaloInfo(
