@@ -1197,14 +1197,16 @@ cell_nucleation(
     float *nuc_threshold = sb->nuc_threshold;
     int *nuc_id2 = sb->nuc_id2;
     int *lsindex = sb->lsindex;
+int *gr = sb->gr;
+double *cl = sb->cl;
 #ifdef GPU_OMP_NUC
 #pragma omp target map(tofrom:nindex2)
 #pragma omp teams distribute
 #endif
     for (int k = 1; k <= dimz; k++)
     {
-        int *gr = sb->gr;
-        double *cl = sb->cl;
+//        int *gr = sb->gr;
+//        double *cl = sb->cl;
 #ifdef GPU_OMP_NUC
 #pragma omp parallel for collapse(2) schedule(static,1)
 #endif

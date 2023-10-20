@@ -111,6 +111,9 @@ ExchangeFacesForVar(
     variable_registration *v = &var_regs[variable_key];
     size_t req_len = 2 * NUM_NEIGHBORS;
 
+    double* dbuf;
+    int* ibuf;
+
     if (v->reqs == NULL)
     {
         xrealloc(v->reqs, MPI_Request, req_len);
@@ -136,6 +139,30 @@ ExchangeFacesForVar(
             memset(v->rbuf[face], 1, v->datasize * n2);
             v->sbuf[face] = malloc(v->datasize * n2);
             memset(v->sbuf[face], 1, v->datasize * n2);
+#ifdef GPU_PACK
+switch( v->datasize)
+{
+    case 8:
+        dbuf = (double*)v->rbuf[face];
+#pragma omp target enter data map(to:dbuf[:n2])
+        dbuf = (double*)v->sbuf[face];
+#pragma omp target enter data map(to:dbuf[:n2])
+        break;
+   case 4:
+       ibuf = (int*)v->rbuf[face];
+#pragma omp target enter data map(to:ibuf[:n2])
+       ibuf = (int*)v->sbuf[face];
+#pragma omp target enter data map(to:ibuf[:n2])
+       break;
+   case 24:
+        dbuf = (double*)v->rbuf[face];
+#pragma omp target enter data map(to:dbuf[:3*n2])
+        dbuf = (double*)v->sbuf[face];
+#pragma omp target enter data map(to:dbuf[:3*n2])
+   default:
+       break;
+}
+#endif
         }
     }
 
@@ -247,8 +274,10 @@ doiteration(
             profile(CALC_NUCLEATION);
         }
         {
+            gr_dataexchange_from(lsp, NULL);
             activateNewGrains();
             profile(GRAIN_ACTIVATION);
+            gr_dataexchange_to(lsp, NULL);
         }
 
         // start communicating gr
@@ -297,11 +326,11 @@ doiteration(
         // finish communications for gr
         {
 
-            gr_dataexchange_from(lsp, NULL);
+            //gr_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(grain_var, lsp->gr);
             FinishExchangeForVar(grain_var, lsp->gr);
-            gr_dataexchange_to(lsp, NULL);
+            //gr_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }
         // finish communications for dc
@@ -334,7 +363,9 @@ doiteration(
             gsolid_volume += solid_volume;
             timing(COMPUTATION, timer_elapsed());
         }
-
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("iteration done...\n");
+//  fflush(stdout);
     }
 
     timing(COMPUTATION, timer_elapsed());
