@@ -606,7 +606,7 @@ grow_octahedra(
                 // if cell part of a grain, grow it
                 if (grid > 0 && grid < bp->maxTotalGrains)
                 {
-                    grain_t grain = bp->grain_cache[grid];
+                    grain_t grain = grain_cache[grid];
 
                     double g00 = grain.rotmat[0][0];
                     double g10 = grain.rotmat[1][0];
@@ -655,7 +655,7 @@ grow_octahedra(
 #endif
         //int idx = lsp->grow_id[i];
         int gid = lsp->gr[idx];
-        grain_t grain = bp->grain_cache[gid];
+        grain_t grain = grain_cache[gid];
 
         double g00 = grain.rotmat[0][0];
         double g10 = grain.rotmat[1][0];
@@ -898,7 +898,7 @@ capture_octahedra_diffuse(
             int gid = ogr[ndx];
             if (gid > 0 && gid < bp->maxTotalGrains)
             {
-                grain_t grain = bp->grain_cache[gid];
+                grain_t grain = grain_cache[gid];
 
                 // Determine if my neighbor captures me
                 g00 = grain.rotmat[0][0];
@@ -1060,7 +1060,7 @@ capture_octahedra_diffuse(
 
                             if (gid > 0)
                             {
-                                grain_t grain = bp->grain_cache[gid];
+                                grain_t grain = grain_cache[gid];
 
                                 // Determine if my neighbor captures me
                                 double g00 = grain.rotmat[0][0];

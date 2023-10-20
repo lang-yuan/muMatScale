@@ -46,6 +46,8 @@ static ll_t *nuc_volumes_ll = NULL;
 static MPI_Datatype grainCommType;
 extern SB_struct *lsp;
 
+grain_t *grain_cache;
+
 #ifdef GPU_OMP
 #pragma omp declare target
 #endif
@@ -404,7 +406,7 @@ createGrains(
             setNucOrientation(&nuc);
         }
 
-        nucleate_grain(&nuc, &bp->grain_cache[gr_num]);
+        nucleate_grain(&nuc, &grain_cache[gr_num]);
         dprintf("putting a grain into offset %d\n", gr_num);
     }
 }
@@ -461,7 +463,8 @@ grainSetup(
     // minimize the memory allocation for bp->grain_cache
     //bp->pre_num_grains = (bp->pre_num_grains > bp->maxTotalGrains)? bp->maxTotalGrains : bp->pre_num_grains ;
 
-    xmalloc(bp->grain_cache, grain_t, bp->maxTotalGrains + 1);
+    xmalloc(grain_cache, grain_t, bp->maxTotalGrains + 1);
+#pragma omp target enter data map(to:grain_cache[0:bp->maxTotalGrains + 1])
     //xmalloc(bp->grain_cache, grain_t, bp->pre_num_grains +1);
 }
 
@@ -475,7 +478,7 @@ grainShutdown(
     void)
 {
     MPI_Type_free(&grainCommType);
-    xfree(bp->grain_cache);
+    xfree(grain_cache);
 }
 
 
@@ -774,7 +777,7 @@ output_grains(
         for (int i = 1; i < bp->num_grains; i++)
         {
             size_t cx, cy, cz;
-            grain_t *g = &bp->grain_cache[i];
+            grain_t *g = &grain_cache[i];
             realcoord2scoord(g->nuc_x, g->nuc_y, g->nuc_z, &cx, &cy, &cz);
             fprintf(fp,
                     "%d,%lu,%lg,%lg,%lg,%lg,%lg,%lu,%lu,%lu,%lg,%lg,%lg,[[%lg %lg %lg][%lg %lg %lg][%lg %lg %lg]],%lg\n",
@@ -876,10 +879,11 @@ activateNewGrains(
         timing(COMPUTATION, timer_elapsed());
 
         MPI_Allgatherv(MPI_IN_PLACE, newGrainArray[iproc], grainCommType,
-                       bp->grain_cache, newGrainArray, displacements,
+                       grain_cache, newGrainArray, displacements,
                        grainCommType, mpi_comm_new);
         timing(COMMUNICATION, timer_elapsed());
         profile(GRAIN_ACTIV_SYNC2);
+#pragma omp target update to(grain_cache[0:bp->maxTotalGrains + 1])
     }
 
     bp->num_grains += new_activations;
@@ -996,7 +1000,7 @@ getGrain2(
     grain_t *gr = NULL;
     if (grnum > 0 && grnum <= bp->maxTotalGrains)
     {
-        gr = &bp->grain_cache[grnum];
+        gr = &grain_cache[grnum];
     }
     return gr;
 }

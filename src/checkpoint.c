@@ -652,7 +652,7 @@ storeGlobalGrainInfo(
                                H5P_DEFAULT);
 
     H5Dwrite(grainSet, memGrain, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-             bp->grain_cache);
+             grain_cache);
     H5Dclose(grainSet);
     H5Pclose(dataspace_grain);
     H5Sclose(grainSpace);
@@ -682,7 +682,7 @@ addGrainCache(
 {
     /*
      * INPUT: file: file identifier of main checkpoint
-     * OUTPUT: bp->grain_cached will be restored
+     * OUTPUT: grain_cached will be restored
      * bp->num_grains will also be restored
      * NOTE: This function is used for main restart
      */
@@ -716,19 +716,19 @@ addGrainCache(
                 H5P_DEFAULT);
 
     H5Dread(cp_grain, memGrain, H5S_ALL, H5S_ALL, H5P_DEFAULT, cpGrain);
-    //restore bp->grain_cache
+    //restore grain_cache
     for (i = 0; i < bp->maxTotalGrains + 1; i++)
     {
-        bp->grain_cache[i].nuc_x = cpGrain[i].nuc_x;
-        bp->grain_cache[i].nuc_y = cpGrain[i].nuc_y;
-        bp->grain_cache[i].nuc_z = cpGrain[i].nuc_z;
-        bp->grain_cache[i].nuc_timestep = cpGrain[i].nuc_timestep;
+        grain_cache[i].nuc_x = cpGrain[i].nuc_x;
+        grain_cache[i].nuc_y = cpGrain[i].nuc_y;
+        grain_cache[i].nuc_z = cpGrain[i].nuc_z;
+        grain_cache[i].nuc_timestep = cpGrain[i].nuc_timestep;
 
         for (j = 0; j < 3; j++)
         {
             for (int k = 0; k < 3; k++)
             {
-                bp->grain_cache[i].rotmat[j][k] = cpGrain[i].rotmat[j][k];
+                grain_cache[i].rotmat[j][k] = cpGrain[i].rotmat[j][k];
             }
         }
     }
@@ -1253,7 +1253,7 @@ writeMainCheckpoint(
 {
     /*
      * INPUT: none
-     * OUTPUT: bp->timestep,bp->grain_cache, bp->num_grains, gtasks, gmsp will be saved in the main checkpoint
+     * OUTPUT: bp->timestep,grain_cache, bp->num_grains, gtasks, gmsp will be saved in the main checkpoint
      * USE: get_rank_cp_path, get_subblock_cp_path
      */
 
