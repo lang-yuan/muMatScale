@@ -23,6 +23,7 @@
 
 double* fs;
 double* cl;
+int* gr;
 
 void
 fs_dataexchange_to(
@@ -70,7 +71,7 @@ gr_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update to(lsp->gr[0:lsp->totaldim])  //nowait
+#pragma omp target update to(gr[0:lsp->totaldim])  //nowait
 #endif
 }
 
@@ -80,7 +81,7 @@ gr_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update from(lsp->gr[0:lsp->totaldim])        //nowait
+#pragma omp target update from(gr[0:lsp->totaldim])        //nowait
 #endif
 }
 
@@ -152,7 +153,7 @@ sb_diffuse_alloy_decentered(
     }
 
 #ifndef GPU_OMP
-    memcpy(lsp->ogr, lsp->gr,
+    memcpy(lsp->ogr, gr,
            (dimx + 2) * (dimy + 2) * (dimz + 2) * sizeof(int));
 #endif
 
@@ -326,12 +327,12 @@ pre_cell_reduction(
                     continue;
 
 #ifdef SEP_LISTS
-                if (lsp->gr[idx] <= 0)  // liquid cell
+                if (gr[idx] <= 0)  // liquid cell
                 {
                     cl[idx] = ce[idx];
                     int nbindex =
-                        lsp->gr[idxp] + lsp->gr[idxm] + lsp->gr[idyp] +
-                        lsp->gr[idym] + lsp->gr[idzp] + lsp->gr[idzm];
+                        gr[idxp] + gr[idxm] + gr[idyp] +
+                        gr[idym] + gr[idzp] + gr[idzm];
                     if (nbindex > 0)
                     {
                         int nn = 0;
@@ -371,13 +372,13 @@ pre_cell_reduction(
                     continue;
                 }
 
-                if (lsp->gr[idx] <= 0)  // liquid cell
+                if (gr[idx] <= 0)  // liquid cell
                     cl[idx] = ce[idx];
 
                 int nbindex =
-                    lsp->gr[idx] + lsp->gr[idxp] + lsp->gr[idxm] +
-                    lsp->gr[idyp] + lsp->gr[idym] + lsp->gr[idzp] +
-                    lsp->gr[idzm];
+                    gr[idx] + gr[idxp] + gr[idxm] +
+                    gr[idyp] + gr[idym] + gr[idzp] +
+                    gr[idzm];
                 if (nbindex > 0)
                 {
                     int nn = 0;
@@ -396,11 +397,11 @@ pre_cell_reduction(
 
 #ifdef SEP_LISTS
     lsp->gindex = gindex;
-    fsindex = fsindex;
+    lsp->fsindex = fsindex;
     lsp->growindex = fsindex;
 #else
     lsp->gindex = gindex;
-    fsindex = gindex;
+    lsp->fsindex = gindex;
     lsp->growindex = gindex;
 
 #endif
@@ -463,11 +464,11 @@ fs_change_diffuse(
                 Tunder += liq_slope * (cl[idx] - cinit);
 
 
-                if (lsp->gr[idx] <= 0 || Tcell < 1.0 || Tcell > Tliq)
+                if (gr[idx] <= 0 || Tcell < 1.0 || Tcell > Tliq)
                 {
                     cl[idx] = ce[idx];
                     lsp->ogr[idx] = 0;
-                    lsp->gr[idx] = 0;
+                    gr[idx] = 0;
                     fs[idx] = 0;
                     continue;
                 }
@@ -505,7 +506,7 @@ fs_change_diffuse(
                 if (fs[idx] < 0.)
                 {
                     fs[idx] = 0.;
-                    lsp->gr[idx] = 0;
+                    gr[idx] = 0;
                     lsp->ogr[idx] = 0;
                     dfs = 0;
                     cl[idx] = ce[idx];
@@ -529,7 +530,7 @@ fs_change_diffuse(
 #else
         int idx = diff_id[i];
 
-        if (lsp->gr[idx] <= 0)
+        if (gr[idx] <= 0)
         {
             cl[idx] = ce[idx];
             continue;
@@ -557,7 +558,7 @@ fs_change_diffuse(
         if (fs[idx] < 0.)
         {
             fs[idx] = 0.;
-            lsp->gr[idx] = 0;
+            gr[idx] = 0;
             cl[idx] = ce[idx];
         }
 
@@ -604,7 +605,7 @@ grow_octahedra(
             for (int i = 1; i <= dimx; i++)
             {
                 int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
-                int grid = lsp->gr[idx];
+                int grid = gr[idx];
 
                 // if cell part of a grain, grow it
                 if (grid > 0 && grid < bp->maxTotalGrains)
@@ -642,7 +643,7 @@ grow_octahedra(
 
 #else // GROWSEP
 
-    int growindex = lsp->growindex;
+    int growindex = growindex;
 
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
@@ -653,11 +654,11 @@ grow_octahedra(
         int idx = fs_id[i];
 #else
         int idx = diff_id[i];
-        if (lsp->gr[idx] <= 0)
+        if (gr[idx] <= 0)
             continue;
 #endif
-        //int idx = lsp->grow_id[i];
-        int gid = lsp->gr[idx];
+        //int idx = grow_id[i];
+        int gid = gr[idx];
         grain_t grain = grain_cache[gid];
 
         double g00 = grain.rotmat[0][0];
@@ -693,7 +694,7 @@ grow_octahedra(
 #endif
     for (int i = 0; i < totaldim; i++)
     {
-        ogr[i] = lsp->gr[i];
+        ogr[i] = gr[i];
     }
 
 }
@@ -736,11 +737,11 @@ grow_cell_reduction(
                 if (mold[idx])
                     continue;
 
-                if (lsp->gr[idx] <= 0)  // liquid cell
+                if (gr[idx] <= 0)  // liquid cell
                 {
                     int nbindex =
-                        lsp->gr[idxp] + lsp->gr[idxm] + lsp->gr[idyp] +
-                        lsp->gr[idym] + lsp->gr[idzp] + lsp->gr[idzm];
+                        gr[idxp] + gr[idxm] + gr[idyp] +
+                        gr[idym] + gr[idzp] + gr[idzm];
                     if (nbindex > 0)
                     {
                         int nn = 0;
@@ -988,7 +989,7 @@ capture_octahedra_diffuse(
                 lsp->dc[ndx].z + nn[found][2] + g20 * ncx + g21 * ncy +
                 g22 * ncz;
 
-            lsp->gr[idx] = ogr[ndx];
+            gr[idx] = ogr[ndx];
             fs[idx] = 0.;  // Just got captured, set my fraction solid to 0
             cl[idx] = ce[idx];
 
@@ -1155,7 +1156,7 @@ capture_octahedra_diffuse(
                                         ncz = 0.;
                                     }
 
-                                    lsp->gr[idx] = ogr[ndx];
+                                    gr[idx] = ogr[ndx];
 
                                     lsp->dc[idx].x =
                                         dc_old[ndx].x + nn[n][0] + g00 * ncx +

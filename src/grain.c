@@ -374,7 +374,7 @@ createGrains(
             sx + sy * (bp->gsdimx + 2) + sz * (bp->gsdimx + 2) * (bp->gsdimy +
                                                                   2);
         SB_struct *sb = lsp;
-        sb->gr[idx] = gr_num;
+        gr[idx] = gr_num;
 
         /* Step 2 */
         int found = 0;
@@ -712,9 +712,9 @@ calculateGrainSizes(
         {
             for (int x = 1; x <= dimx; x++)
             {
-                if (sb->gr[SBIDX(x, y, z)] > 0)
+                if (gr[SBIDX(x, y, z)] > 0)
                 {
-                    sizes[sb->gr[SBIDX(x, y, z)]]++;
+                    sizes[gr[SBIDX(x, y, z)]]++;
                 }
             }
         }
@@ -1083,7 +1083,7 @@ cell_nucleation(
                         initnuc = 0;
                 }
 
-                if ((!sb->mold[idx]) && (sb->gr[idx] <= 0) && lyaerno
+                if ((!sb->mold[idx]) && (gr[idx] <= 0) && lyaerno
                     && initnuc)
                     // Liquid, and a nuc site!
                 {
@@ -1144,7 +1144,7 @@ cell_nucleation(
             for (int i = 1; i <= dimx; i++)
             {
                 int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
-                if (sb->gr[idx] <= 0)
+                if (gr[idx] <= 0)
                 {
                     int nn = 0;
 #pragma omp atomic capture
@@ -1203,7 +1203,6 @@ cell_nucleation(
 #endif
     for (int k = 1; k <= dimz; k++)
     {
-        int *gr = sb->gr;
 #ifdef GPU_OMP_NUC
 #pragma omp parallel for collapse(2) schedule(static,1)
 #endif

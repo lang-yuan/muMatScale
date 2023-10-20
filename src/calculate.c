@@ -247,14 +247,18 @@ doiteration(
             profile(CALC_NUCLEATION);
         }
         {
+            // update gr on CPU before ops on gr
+            gr_dataexchange_from(lsp, NULL);
+
             activateNewGrains();
             profile(GRAIN_ACTIVATION);
         }
 
-        // start communicating gr
         {
-            //No need to copy back from GPU since gr was just set on CPU
-            //        ExchangeFacesForVar(grain_var);
+            ExchangeFacesForVar(grain_var, gr);
+            FinishExchangeForVar(grain_var, gr);
+            gr_dataexchange_to(lsp, NULL);
+            profile(OFFLOADING_CPU_GPU);
         }
 
         {
@@ -285,7 +289,6 @@ doiteration(
             profile(CALC_FS_CHANGE);
         }
 
-
         // Uses No Halo: gr, fs, dc
         // Uses w/ Halo:
         // Produces: d, fs
@@ -294,16 +297,6 @@ doiteration(
             profile(CALC_GROW_OCTAHEDRA);
         }
 
-        // finish communications for gr
-        {
-
-            gr_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(grain_var, lsp->gr);
-            FinishExchangeForVar(grain_var, lsp->gr);
-            gr_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
-        }
         // finish communications for dc
         {
             FinishExchangeForVar(dc_var, lsp->dc);

@@ -210,8 +210,8 @@ clearSubblocks(
         xfree(s->dc);
     if (s->d)
         xfree(s->d);
-    if (s->gr)
-        xfree(s->gr);
+    //if (s->gr)
+    //    xfree(s->gr);
     if (s->ogr)
         xfree(s->ogr);
     if (s->temperature)
