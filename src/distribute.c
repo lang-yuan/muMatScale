@@ -188,8 +188,8 @@ clearSubblocks(
     SB_struct *s = lsp;
     if (s->mold)
         xfree(s->mold);
-    if (s->fs)
-        xfree(s->fs);
+    //if (s->fs)
+    //    xfree(s->fs);
     if (s->nuc_threshold)
         xfree(s->nuc_threshold);
     if (s->ce)

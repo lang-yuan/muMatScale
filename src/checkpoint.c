@@ -316,7 +316,7 @@ restoreSubblock(
 
     xmalloc(sb, SB_struct, 1);
     allocate_byte(&sb->mold);
-    allocate_float(&(sb->fs));
+    allocate_float(&(fs));
     xmalloc(sb->nuc_threshold, float,
               (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2));
     allocate_float(&(sb->temperature));
@@ -380,9 +380,18 @@ restoreSubblock(
 		} \
 	} while(0)
 
+#define READ_SIMPLE_FIELD(field, type) \
+        do { \
+                if ( field ) { \
+                        hid_t dset = H5Dopen(file_id, read_subblock_cp_path(name, #field), H5P_DEFAULT); \
+                        H5Dread(dset, type, memspace, H5S_ALL, H5P_DEFAULT, field); \
+                        H5Dclose(dset); \
+                } \
+        } while(0)
+
     READ_FIELD(temperature, H5T_NATIVE_DOUBLE);
     READ_FIELD(gr, H5T_NATIVE_INT);
-    READ_FIELD(fs, H5T_NATIVE_DOUBLE);
+    READ_SIMPLE_FIELD(fs, H5T_NATIVE_DOUBLE);
     READ_FIELD(ce, H5T_NATIVE_DOUBLE);
     READ_FIELD(oce, H5T_NATIVE_DOUBLE);
     READ_FIELD(cl, H5T_NATIVE_DOUBLE);
@@ -1178,10 +1187,20 @@ writeTaskCheckpoint(
 				H5Dclose(dset); \
 			} \
 		} while(0)
+#define WRITE_FIELD_SIMPLE(name, type) \
+                do { \
+                        /* Only write ones that exist */ \
+                        if ( name ) \
+                        { \
+                                hid_t dset = H5Dcreate(subgroup, #name, type, dataspace, link_pl, dataspace_pl, H5P_DEFAULT); \
+                                H5Dwrite(dset, type, memspace, H5S_ALL, H5P_DEFAULT, name); \
+                                H5Dclose(dset); \
+                        } \
+                } while(0)
 
         WRITE_FIELD(temperature, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(gr, H5T_NATIVE_INT);
-        WRITE_FIELD(fs, H5T_NATIVE_DOUBLE);
+        WRITE_FIELD_SIMPLE(fs, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(ce, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(oce, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(cl, H5T_NATIVE_DOUBLE);

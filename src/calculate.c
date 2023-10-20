@@ -216,7 +216,7 @@ doiteration(
         {
             fs_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(fs_var, lsp->fs);
+            ExchangeFacesForVar(fs_var, fs);
         }
 
         // start communication for dc
@@ -263,7 +263,7 @@ doiteration(
             profile(OFFLOADING_CPU_GPU);
         }
         {
-            FinishExchangeForVar(fs_var, lsp->fs);
+            FinishExchangeForVar(fs_var, fs);
             fs_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }

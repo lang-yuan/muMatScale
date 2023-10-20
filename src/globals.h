@@ -198,7 +198,6 @@ typedef struct subblock
     size_t mold_size;
 
 
-    double *fs;
     double *ce, *oce;
     double *cl;
 
@@ -234,6 +233,7 @@ typedef struct subblock
 
 } SB_struct;
 
+extern double *fs;
 
 // Note, if you change this, update 'grainSetup' in grain.c
 typedef struct

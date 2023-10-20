@@ -60,7 +60,7 @@ SetupInitialConditions(
     {
         lsp->gr[i] = 0;
         lsp->ogr[i] = 0;
-        lsp->fs[i] = 0;
+        fs[i] = 0;
         lsp->d[i] = 0;
         lsp->nuc_threshold[i] = INFINITY;
         lsp->lsindex[i] = 1;
@@ -111,7 +111,7 @@ allocateFields(
     )
 {
     allocate_byte(&lsp->mold);
-    allocate_float(&(lsp->fs));
+    allocate_float(&(fs));
 
     xmalloc(lsp->nuc_threshold, float,
               (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2));
@@ -160,7 +160,8 @@ allocateFields(
 #ifdef GPU_OMP
 #pragma omp target update to (lsp->cl[0:totaldim]) nowait
 #pragma omp target update to (lsp->d[0:totaldim]) nowait
-#pragma omp target update to (lsp->fs[0:totaldim]) nowait
+//#pragma omp target update to (lsp->fs[0:totaldim]) nowait
+#pragma omp target enter data map(to:fs[0:totaldim])
 #pragma omp target update to (lsp->dc[0:totaldim]) nowait
 #pragma omp target update to (lsp->gr[0:totaldim]) nowait
 #pragma omp target update to (lsp->lsindex[0:totaldim])

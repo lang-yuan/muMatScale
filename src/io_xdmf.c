@@ -620,12 +620,12 @@ xdmf_writeSubblocks(
         H5Dclose(grain);
 
                 /***** Fraction Solid *****/
-        hid_t fs = H5Dcreate(file_id, get_subblock_path(sb, "FracSolid"),
+        hid_t fsd = H5Dcreate(file_id, get_subblock_path(sb, "FracSolid"),
                              H5T_NATIVE_DOUBLE, dataspace, link_pl,
                              dataspace_pl, H5P_DEFAULT);
-        H5Dwrite(fs, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
-                 sb->fs);
-        H5Dclose(fs);
+        H5Dwrite(fsd, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
+                 fs);
+        H5Dclose(fsd);
     }
 
 
