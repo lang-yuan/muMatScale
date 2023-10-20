@@ -253,13 +253,6 @@ doiteration(
             ExchangeFacesForVar(dc_var, lsp->dc);
         }
 
-        // start communication for d
-        {
-            d_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(d_var, lsp->d);
-        }
-
         // Produces:  temperature
         {
             tempUpdate(false);
@@ -283,7 +276,11 @@ doiteration(
         // start communicating gr
         {
             //No need to copy back from GPU since gr was just set on CPU
-            //        ExchangeFacesForVar(grain_var);
+            profile(OFFLOADING_GPU_CPU);
+            ExchangeFacesForVar(grain_var, lsp->gr);
+            FinishExchangeForVar(grain_var, lsp->gr);
+            //gr_dataexchange_to(lsp, NULL);
+            profile(OFFLOADING_CPU_GPU);
         }
 
         {
@@ -323,16 +320,13 @@ doiteration(
             profile(CALC_GROW_OCTAHEDRA);
         }
 
-        // finish communications for gr
+        // start communication for d
         {
-
-            //gr_dataexchange_from(lsp, NULL);
+            d_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(grain_var, lsp->gr);
-            FinishExchangeForVar(grain_var, lsp->gr);
-            //gr_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            ExchangeFacesForVar(d_var, lsp->d);
         }
+
         // finish communications for dc
         {
             FinishExchangeForVar(dc_var, lsp->dc);
