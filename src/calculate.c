@@ -223,7 +223,7 @@ doiteration(
         {
             dc_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(dc_var, lsp->dc);
+            ExchangeFacesForVar(dc_var, dc);
         }
 
         // Produces:  temperature
@@ -299,7 +299,7 @@ doiteration(
 
         // finish communications for dc
         {
-            FinishExchangeForVar(dc_var, lsp->dc);
+            FinishExchangeForVar(dc_var, dc);
             dc_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }

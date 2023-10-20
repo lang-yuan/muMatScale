@@ -141,7 +141,7 @@ allocateFields(
     }
 
     // Allocate arrays for decentered octahedron information
-    allocate_decentered(&(lsp->dc));
+    allocate_decentered(&(dc));
     allocate_float(&(d));
 
     allocate_int(&(gr));
@@ -164,7 +164,8 @@ allocateFields(
 #pragma omp target enter data map(to:d[0:totaldim])
 //#pragma omp target update to (lsp->fs[0:totaldim]) nowait
 #pragma omp target enter data map(to:fs[0:totaldim])
-#pragma omp target update to (lsp->dc[0:totaldim]) nowait
+//#pragma omp target update to (lsp->dc[0:totaldim]) nowait
+#pragma omp target enter data map(to:dc[0:totaldim])
 //#pragma omp target update to (lsp->gr[0:totaldim]) nowait
 #pragma omp target enter data map(to:gr[0:totaldim])
 #pragma omp target update to (lsp->lsindex[0:totaldim])

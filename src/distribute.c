@@ -206,8 +206,8 @@ clearSubblocks(
         xfree(s->nuc_id);
     if (s->nuc_id2)
         xfree(s->nuc_id2);
-    if (s->dc)
-        xfree(s->dc);
+    //if (s->dc)
+    //    xfree(s->dc);
     //if (s->d)
     //    xfree(s->d);
     //if (s->gr)

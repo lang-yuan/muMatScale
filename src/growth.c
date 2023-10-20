@@ -25,6 +25,7 @@ double* fs;
 double* cl;
 double* d;
 int* gr;
+decentered_t *dc;
 
 void
 fs_dataexchange_to(
@@ -112,7 +113,7 @@ dc_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update to(lsp->dc[0:lsp->totaldim])  //nowait
+#pragma omp target update to(dc[0:lsp->totaldim])  //nowait
 #endif
 }
 
@@ -122,7 +123,7 @@ dc_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update from(lsp->dc[0:lsp->totaldim])        //nowait
+#pragma omp target update from(dc[0:lsp->totaldim])        //nowait
 #endif
 }
 
@@ -625,9 +626,9 @@ grow_octahedra(
                     double g12 = grain.rotmat[1][2];
                     double g22 = grain.rotmat[2][2];
 
-                    double rx0 = 0.0 - lsp->dc[idx].x;
-                    double ry0 = 0.0 - lsp->dc[idx].y;
-                    double rz0 = 0.0 - lsp->dc[idx].z;
+                    double rx0 = 0.0 - dc[idx].x;
+                    double ry0 = 0.0 - dc[idx].y;
+                    double rz0 = 0.0 - dc[idx].z;
 
                     double gx0 = g00 * rx0 + g10 * ry0 + g20 * rz0;
                     double gy0 = g01 * rx0 + g11 * ry0 + g21 * rz0;
@@ -674,9 +675,9 @@ grow_octahedra(
         double g12 = grain.rotmat[1][2];
         double g22 = grain.rotmat[2][2];
 
-        double rx0 = 0.0 - lsp->dc[idx].x;
-        double ry0 = 0.0 - lsp->dc[idx].y;
-        double rz0 = 0.0 - lsp->dc[idx].z;
+        double rx0 = 0.0 - dc[idx].x;
+        double ry0 = 0.0 - dc[idx].y;
+        double rz0 = 0.0 - dc[idx].z;
 
         double gx0 = g00 * rx0 + g10 * ry0 + g20 * rz0;
         double gy0 = g01 * rx0 + g11 * ry0 + g21 * rz0;
@@ -809,7 +810,7 @@ capture_octahedra_diffuse(
     int sizedc =
         sizeof(decentered_t) * ((bp->gsdimx + 2) * (bp->gsdimy + 2) *
                                 (bp->gsdimz + 2));
-    memcpy(dc_old, lsp->dc, sizedc);
+    memcpy(dc_old, dc, sizedc);
 #endif
 
     dwrite(DEBUG_TASK_CTRL,
@@ -918,9 +919,9 @@ capture_octahedra_diffuse(
                 g12 = grain.rotmat[1][2];
                 g22 = grain.rotmat[2][2];
 
-                double rx1 = -1.0 * nn[n][0] - lsp->dc[ndx].x;
-                double ry1 = -1.0 * nn[n][1] - lsp->dc[ndx].y;
-                double rz1 = -1.0 * nn[n][2] - lsp->dc[ndx].z;
+                double rx1 = -1.0 * nn[n][0] - dc[ndx].x;
+                double ry1 = -1.0 * nn[n][1] - dc[ndx].y;
+                double rz1 = -1.0 * nn[n][2] - dc[ndx].z;
 
                 dx = g00 * rx1 + g10 * ry1 + g20 * rz1;
                 dy = g01 * rx1 + g11 * ry1 + g21 * rz1;
@@ -981,13 +982,13 @@ capture_octahedra_diffuse(
 
             // set dc_tmp based on value of dc at neighboring cell
             dc_tmp[i].x =
-                lsp->dc[ndx].x + nn[found][0] + g00 * ncx + g01 * ncy +
+                dc[ndx].x + nn[found][0] + g00 * ncx + g01 * ncy +
                 g02 * ncz;
             dc_tmp[i].y =
-                lsp->dc[ndx].y + nn[found][1] + g10 * ncx + g11 * ncy +
+                dc[ndx].y + nn[found][1] + g10 * ncx + g11 * ncy +
                 g12 * ncz;
             dc_tmp[i].z =
-                lsp->dc[ndx].z + nn[found][2] + g20 * ncx + g21 * ncy +
+                dc[ndx].z + nn[found][2] + g20 * ncx + g21 * ncy +
                 g22 * ncz;
 
             gr[idx] = ogr[ndx];
@@ -997,7 +998,7 @@ capture_octahedra_diffuse(
         }
     }
 
-    // update lsp->dc
+    // update dc
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
 #endif
@@ -1005,9 +1006,9 @@ capture_octahedra_diffuse(
     {
         int idx = diff_id[i];
 
-        lsp->dc[idx].x = dc_tmp[i].x;
-        lsp->dc[idx].y = dc_tmp[i].y;
-        lsp->dc[idx].z = dc_tmp[i].z;
+        dc[idx].x = dc_tmp[i].x;
+        dc[idx].y = dc_tmp[i].y;
+        dc[idx].z = dc_tmp[i].z;
     }
 
 #if defined(GPU_OMP)
@@ -1159,13 +1160,13 @@ capture_octahedra_diffuse(
 
                                     gr[idx] = ogr[ndx];
 
-                                    lsp->dc[idx].x =
+                                    dc[idx].x =
                                         dc_old[ndx].x + nn[n][0] + g00 * ncx +
                                         g01 * ncy + g02 * ncz;
-                                    lsp->dc[idx].y =
+                                    dc[idx].y =
                                         dc_old[ndx].y + nn[n][1] + g10 * ncx +
                                         g11 * ncy + g12 * ncz;
-                                    lsp->dc[idx].z =
+                                    dc[idx].z =
                                         dc_old[ndx].z + nn[n][2] + g20 * ncx +
                                         g21 * ncy + g22 * ncz;
 
