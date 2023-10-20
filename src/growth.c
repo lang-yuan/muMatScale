@@ -27,8 +27,8 @@ fs_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-double* fs = lsp->fs;
-#pragma omp target update to(fs[0:lsp->totaldim])  //nowait
+//double* fs = lsp->fs;
+//#pragma omp target update to(fs[0:lsp->totaldim])  //nowait
 #endif
 }
 
@@ -38,8 +38,8 @@ fs_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-double* fs = lsp->fs;
-#pragma omp target update from(fs[0:lsp->totaldim])        //nowait
+//double* fs = lsp->fs;
+//#pragma omp target update from(fs[0:lsp->totaldim])        //nowait
 #endif
 }
 
@@ -49,8 +49,8 @@ cl_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-double* cl = lsp->cl;
-#pragma omp target update to(cl[0:lsp->totaldim])  //nowait
+//double* cl = lsp->cl;
+//#pragma omp target update to(cl[0:lsp->totaldim])  //nowait
 #endif
 }
 
@@ -60,8 +60,8 @@ cl_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-double* cl = lsp->cl;
-#pragma omp target update from(cl[0:lsp->totaldim])        //nowait
+//double* cl = lsp->cl;
+//#pragma omp target update from(cl[0:lsp->totaldim])        //nowait
 #endif
 }
 
@@ -93,8 +93,8 @@ d_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-double* d = lsp->d;
-#pragma omp target update to(d[0:lsp->totaldim])   //nowait
+//double* d = lsp->d;
+//#pragma omp target update to(d[0:lsp->totaldim])   //nowait
 #endif
 }
 
@@ -104,8 +104,8 @@ d_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-double* d = lsp->d;
-#pragma omp target update from(d[0:lsp->totaldim]) //nowait
+//double* d = lsp->d;
+//#pragma omp target update from(d[0:lsp->totaldim]) //nowait
 #endif
 }
 
@@ -115,8 +115,8 @@ dc_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-decentered_t* dc = lsp->dc;
-#pragma omp target update to(dc[0:lsp->totaldim])  //nowait
+//decentered_t* dc = lsp->dc;
+//#pragma omp target update to(dc[0:lsp->totaldim])  //nowait
 #endif
 }
 
@@ -126,8 +126,8 @@ dc_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-decentered_t* dc = lsp->dc;
-#pragma omp target update from(dc[0:lsp->totaldim])        //nowait
+//decentered_t* dc = lsp->dc;
+//#pragma omp target update from(dc[0:lsp->totaldim])        //nowait
 #endif
 }
 
@@ -461,6 +461,10 @@ fs_change_diffuse(
 
 #ifndef FSSEP
 
+    double* cl = lsp->cl;
+    double* fs = lsp->fs;
+    int* gr = lsp->gr;
+    int* ogr = lsp->ogr;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute
 #endif
@@ -598,6 +602,10 @@ grow_octahedra(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused)
 {
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("grow_octahedra...\n");
+//fflush(stdout);
+
     const int dimx = bp->gsdimx;
     const int dimy = bp->gsdimy;
     const int dimz = bp->gsdimz;
@@ -613,6 +621,10 @@ grow_octahedra(
 
 #ifndef GROWSEP
 
+int* gr = lsp->gr;
+double* d = lsp->d;
+decentered_t* dc = lsp->dc;
+double* fs = lsp->fs;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute
 #endif
@@ -630,7 +642,7 @@ grow_octahedra(
                 int grid = gr[idx];
 
                 // if cell part of a grain, grow it
-                if (grid > 0 && grid < bp->maxTotalGrains)
+                if (0 && grid > 0 && grid < bp->maxTotalGrains)
                 {
                     grain_t grain = grain_cache[grid];
 
@@ -667,6 +679,10 @@ grow_octahedra(
 
     int growindex = growindex;
 
+    double* d = lsp->d;
+    double* fs = lsp->fs;
+    int* gr = lsp->gr;
+    decentered_t* dc = lsp->dc;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
 #endif
@@ -679,7 +695,6 @@ grow_octahedra(
         if (gr[idx] <= 0)
             continue;
 #endif
-        //int idx = grow_id[i];
         int gid = gr[idx];
         grain_t grain = grain_cache[gid];
 
@@ -709,6 +724,8 @@ grow_octahedra(
         d[idx] = ds1 + fs[idx] * fsgrow;
     }
 #endif //GROWSEP
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("almost done...\n");
 
     int *ogr = lsp->ogr;
 #if defined(GPU_OMP)
@@ -718,6 +735,8 @@ grow_octahedra(
     {
         ogr[i] = gr[i];
     }
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("done...\n");
 
 }
 
@@ -726,6 +745,10 @@ grow_cell_reduction(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused)
 {
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("grow_cell_reduction...\n");
+//fflush(stdout);
+
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
@@ -735,8 +758,7 @@ grow_cell_reduction(
     int8_t *mold = lsp->mold;
     int *diff_id = lsp->diff_id;
     int *nuc_id = lsp->nuc_id;
-    int *gr = lsp->gr;
- 
+    int* gr = lsp->gr;
 #if defined(GPU_OMP)
 #pragma omp target map(tofrom:gindex, nindex)
 #pragma omp teams distribute
@@ -816,6 +838,9 @@ capture_octahedra_diffuse(
     double* d = lsp->d;
     decentered_t* dc = lsp->dc;
     int *gr = lsp->gr;
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("capture_octahedra_diffuse...\n");
+//fflush(stdout);
 
     double *solid_volume = (double *) vsolid_volume;
     double sum_fs = 0.0;
@@ -892,6 +917,11 @@ capture_octahedra_diffuse(
     }
 
     int *diff_id = lsp->diff_id;
+    double* d= lsp->d;
+    double* cl = lsp->cl;
+    decentered_t* dc = lsp->dc;
+    int* gr = lsp->gr;
+    double* fs = lsp->fs;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
 #endif
@@ -1025,7 +1055,10 @@ capture_octahedra_diffuse(
         }
     }
 
-    // update dc
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("update dc...\n");
+//fflush(stdout);
+    // update lsp->dc
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
 #endif
@@ -1037,6 +1070,10 @@ capture_octahedra_diffuse(
         dc[idx].y = dc_tmp[i].y;
         dc[idx].z = dc_tmp[i].z;
     }
+
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("sum fs...\n");
+//fflush(stdout);
 
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for collapse(3) reduction(+:sum_fs) schedule(static,1)
@@ -1214,7 +1251,9 @@ capture_octahedra_diffuse(
     }
 
 #endif //INDEX_SEP
-
+MPI_Barrier(MPI_COMM_WORLD);
+//printf("fs = %le\n",sum_fs);
+//fflush(stdout);
     (*solid_volume) += sum_fs * pow(bp->cellSize, 3.0);
     dwrite(DEBUG_TASK_CTRL, "(sb: %d) Returning %lu solids\n",
            lsp->subblockid, solid_count);

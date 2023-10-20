@@ -154,6 +154,7 @@ allocateFields(
 
 #ifdef GPU_OMP
     int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
+<<<<<<< HEAD
 
 double *cl = lsp->cl;
 #pragma omp target enter data map(to:cl[0:totaldim])
@@ -165,8 +166,35 @@ decentered_t *dc = lsp->dc;
 #pragma omp target enter data map(to:dc[0:totaldim])
 int *gr = lsp->gr;
 #pragma omp target enter data map(to:gr[0:totaldim])
-#pragma omp target update to (lsp->lsindex[0:totaldim])
+=======
+#ifdef GPU_LSP
+#pragma omp target enter data map(to:lsp[0:1]) nowait
+#endif
+#endif
 
+#ifdef GPU_OMP
+#ifdef GPU_LSP
+#pragma omp target update to (lsp->cl[0:totaldim]) nowait
+#pragma omp target update to (lsp->d[0:totaldim]) nowait
+#pragma omp target update to (lsp->fs[0:totaldim]) nowait
+#pragma omp target update to (lsp->dc[0:totaldim]) nowait
+#pragma omp target update to (lsp->gr[0:totaldim]) nowait
+>>>>>>> f3bb9a8 (Offload ptr rather than struct)
+#pragma omp target update to (lsp->lsindex[0:totaldim])
+#else
+    double* cl = lsp->cl;
+#pragma omp target enter data map(to:cl[0:totaldim]) nowait
+    double* d = lsp->d;
+#pragma omp target enter data map(to:d[0:totaldim]) nowait
+    double* fs = lsp->fs;
+#pragma omp target enter data map(to:fs[0:totaldim]) nowait
+    decentered_t* dc = lsp->dc;
+#pragma omp target enter data map(to:dc[0:totaldim]) nowait
+    int* gr = lsp->gr;
+#pragma omp target enter data map(to:gr[0:totaldim]) nowait
+    int* lsindex = lsp->lsindex;
+#pragma omp target enter data map(to:lsindex[0:totaldim])
+#endif
 
 #pragma omp target enter data map(to:bp[0:1]) nowait
 
