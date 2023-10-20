@@ -254,7 +254,17 @@ doiteration(
             cell_nucleation(lsp, NULL);
         }
         {
+            // update gr on CPU before ops on gr
+            gr_dataexchange_from(lsp, NULL);
+
             activateNewGrains();
+        }
+
+        {
+            ExchangeFacesForVar(grain_var, lsp->gr);
+            FinishExchangeForVar(grain_var, lsp->gr);
+            gr_dataexchange_to(lsp, NULL);
+            profile(OFFLOADING_CPU_GPU);
         }
 
         {
@@ -296,10 +306,6 @@ doiteration(
             profile(CALC_FS_CHANGE);
         }
 
-        {
-            ExchangeFacesForVar(grain_var, lsp->gr);
-        }
-
         // Uses No Halo: gr, fs, dc
         // Uses w/ Halo:
         // Produces: d, fs
@@ -310,6 +316,8 @@ doiteration(
 
         // start communication for d
         {
+            d_dataexchange_from(lsp, NULL);
+            profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(d_var, lsp->d);
         }
 
