@@ -22,6 +22,7 @@
 #include "xmalloc.h"
 
 double* fs;
+double* cl;
 
 void
 fs_dataexchange_to(
@@ -49,7 +50,7 @@ cl_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update to(lsp->cl[0:lsp->totaldim])  //nowait
+#pragma omp target update to(cl[0:lsp->totaldim])  //nowait
 #endif
 }
 
@@ -59,7 +60,7 @@ cl_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update from(lsp->cl[0:lsp->totaldim])        //nowait
+#pragma omp target update from(cl[0:lsp->totaldim])        //nowait
 #endif
 }
 
@@ -185,7 +186,7 @@ sb_diffuse_alloy_decentered(
             {
                 int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
                 double nbsum = 0;
-                double conc = lsp->cl[idx];
+                double conc = cl[idx];
                 double lspfs = fs[idx];
 
                 int idxp = idx + 1;
@@ -200,32 +201,32 @@ sb_diffuse_alloy_decentered(
 
                 fs_av = 0.5 * (lspfs + fs[idxp]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idxp]);
-                double concxp = lsp->cl[idxp];
+                double concxp = cl[idxp];
                 nbsum += r * (concxp - conc);
 
                 fs_av = 0.5 * (lspfs + fs[idxm]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idxm]);
-                double concxm = lsp->cl[idxm];
+                double concxm = cl[idxm];
                 nbsum += r * (concxm - conc);
 
                 fs_av = 0.5 * (lspfs + fs[idyp]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idyp]);
-                double concyp = lsp->cl[idyp];
+                double concyp = cl[idyp];
                 nbsum += r * (concyp - conc);
 
                 fs_av = 0.5 * (lspfs + fs[idym]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idym]);
-                double concym = lsp->cl[idym];
+                double concym = cl[idym];
                 nbsum += r * (concym - conc);
 
                 fs_av = 0.5 * (lspfs + fs[idzp]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idzp]);
-                double conczp = lsp->cl[idzp];
+                double conczp = cl[idzp];
                 nbsum += r * (conczp - conc);
 
                 fs_av = 0.5 * (lspfs + fs[idzm]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idzm]);
-                double conczm = lsp->cl[idzm];
+                double conczm = cl[idzm];
                 nbsum += r * (conczm - conc);
 
 /*
@@ -269,7 +270,7 @@ sb_diffuse_alloy_decentered(
 	 			(i + nn[n][0]);
          double fs_av = 0.5 * (lspfs + fs[ndx]);
 		 double r = rs * fs_av + rl * (1 - fs_av);
-		 double nbconc = lsp->cl[ndx];
+		 double nbconc = cl[ndx];
 		 nbsum += r * (nbconc - conc);
 	  }
 */
@@ -327,7 +328,7 @@ pre_cell_reduction(
 #ifdef SEP_LISTS
                 if (lsp->gr[idx] <= 0)  // liquid cell
                 {
-                    lsp->cl[idx] = ce[idx];
+                    cl[idx] = ce[idx];
                     int nbindex =
                         lsp->gr[idxp] + lsp->gr[idxm] + lsp->gr[idyp] +
                         lsp->gr[idym] + lsp->gr[idzp] + lsp->gr[idzm];
@@ -347,7 +348,7 @@ pre_cell_reduction(
 
                 if (fs[idx] == 1)
                 {
-                    lsp->cl[idx] = ce[idx] * k_inv;
+                    cl[idx] = ce[idx] * k_inv;
                     continue;
                 }
 
@@ -366,12 +367,12 @@ pre_cell_reduction(
 #else // NOT SEP_LISTS
                 if (fs[idx] >= 1.0)
                 {
-                    lsp->cl[idx] = ce[idx] * k_inv;
+                    cl[idx] = ce[idx] * k_inv;
                     continue;
                 }
 
                 if (lsp->gr[idx] <= 0)  // liquid cell
-                    lsp->cl[idx] = ce[idx];
+                    cl[idx] = ce[idx];
 
                 int nbindex =
                     lsp->gr[idx] + lsp->gr[idxp] + lsp->gr[idxm] +
@@ -459,12 +460,12 @@ fs_change_diffuse(
                 double c_int = cinit + m_inv * (Tcell - Tliq);
                 double Tunder = Tliq - Tcell;
 
-                Tunder += liq_slope * (lsp->cl[idx] - cinit);
+                Tunder += liq_slope * (cl[idx] - cinit);
 
 
                 if (lsp->gr[idx] <= 0 || Tcell < 1.0 || Tcell > Tliq)
                 {
-                    lsp->cl[idx] = ce[idx];
+                    cl[idx] = ce[idx];
                     lsp->ogr[idx] = 0;
                     lsp->gr[idx] = 0;
                     fs[idx] = 0;
@@ -473,7 +474,7 @@ fs_change_diffuse(
 
                 if (fs[idx] == 1.0 && (Tunder >= 0.0))
                 {
-                    lsp->cl[idx] = ce[idx] * k_inv;
+                    cl[idx] = ce[idx] * k_inv;
                     continue;
                 }
 
@@ -491,13 +492,13 @@ fs_change_diffuse(
                 // at neighbors
                 double dce = ce[idx] - oce[idx];
                 double dcl =
-                    (c_int - lsp->cl[idx]) * D_xt * 2 + dce / (1 -
+                    (c_int - cl[idx]) * D_xt * 2 + dce / (1 -
                                                                km *
                                                                fs[idx]);
                 double dfs =
                     (dcl * (1. - km * fs[idx]) -
-                     dce) * km_inv / lsp->cl[idx];
-                lsp->cl[idx] += dcl;
+                     dce) * km_inv / cl[idx];
+                cl[idx] += dcl;
                 fs[idx] += dfs;
                 fs[idx] = MIN(1.0, fs[idx]);
 
@@ -507,7 +508,7 @@ fs_change_diffuse(
                     lsp->gr[idx] = 0;
                     lsp->ogr[idx] = 0;
                     dfs = 0;
-                    lsp->cl[idx] = ce[idx];
+                    cl[idx] = ce[idx];
                 }
 
             }
@@ -530,13 +531,13 @@ fs_change_diffuse(
 
         if (lsp->gr[idx] <= 0)
         {
-            lsp->cl[idx] = ce[idx];
+            cl[idx] = ce[idx];
             continue;
         }
 
         if (fs[idx] == 1.0)
         {
-            lsp->cl[idx] = ce[idx] * k_inv;
+            cl[idx] = ce[idx] * k_inv;
             continue;
         }
 
@@ -547,9 +548,9 @@ fs_change_diffuse(
         double c_int = cinit + m_inv * (Tcell - Tliq);
 
         double dce = ce[idx] - oce[idx];
-        double dcl = (c_int - lsp->cl[idx]) * D_xt * 2 + dce / (1 - km * fs);
-        double dfs = (dcl * (1. - km * fs) - dce) * km_inv / lsp->cl[idx];
-        lsp->cl[idx] += dcl;
+        double dcl = (c_int - cl[idx]) * D_xt * 2 + dce / (1 - km * fs);
+        double dfs = (dcl * (1. - km * fs) - dce) * km_inv / cl[idx];
+        cl[idx] += dcl;
         fs[idx] += dfs;
         fs[idx] = MIN(1.0, fs[idx]);
 
@@ -557,7 +558,7 @@ fs_change_diffuse(
         {
             fs[idx] = 0.;
             lsp->gr[idx] = 0;
-            lsp->cl[idx] = ce[idx];
+            cl[idx] = ce[idx];
         }
 
     }
@@ -989,7 +990,7 @@ capture_octahedra_diffuse(
 
             lsp->gr[idx] = ogr[ndx];
             fs[idx] = 0.;  // Just got captured, set my fraction solid to 0
-            lsp->cl[idx] = ce[idx];
+            cl[idx] = ce[idx];
 
         }
     }
@@ -1169,7 +1170,7 @@ capture_octahedra_diffuse(
 
                                     dfs = 0;
                                     fs[idx] = dfs; // Just got captured, set my fraction solid to 0
-                                    lsp->cl[idx] = ce[idx];
+                                    cl[idx] = ce[idx];
 
                                 }
                             }

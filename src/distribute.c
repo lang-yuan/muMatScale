@@ -196,8 +196,8 @@ clearSubblocks(
         xfree(s->ce);
     if (s->oce)
         xfree(s->oce);
-    if (s->cl)
-        xfree(s->cl);
+    //if (s->cl)
+    //    xfree(s->cl);
     if (s->diff_id)
         xfree(s->diff_id);
     if (s->fs_id)

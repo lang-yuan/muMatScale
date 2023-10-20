@@ -1091,7 +1091,7 @@ cell_nucleation(
                     double m_solute0 =
                         m_solute0_a * Ttemp * Ttemp +
                         m_solute0_b * Ttemp + m_solute0_c;
-                    Tunder += m_solute0 * (sb->cl[idx] - bp->Cinit);
+                    Tunder += m_solute0 * (cl[idx] - bp->Cinit);
                     // If this isn't a nucleation site, nuc_threshold will be
                     // INFINITY, so this give us a false positive
                     if (Tunder > nuc_threshold[idx])
@@ -1174,7 +1174,7 @@ cell_nucleation(
         double Tunder = bp->liquidusTemp - Ttemp;
         double m_solute0 =
             m_solute0_a * Ttemp * Ttemp + m_solute0_b * Ttemp + m_solute0_c;
-        Tunder += m_solute0 * (sb->cl[idx] - cinit);
+        Tunder += m_solute0 * (cl[idx] - cinit);
 
         if (Tunder > nuc_threshold[idx])
         {
@@ -1204,7 +1204,6 @@ cell_nucleation(
     for (int k = 1; k <= dimz; k++)
     {
         int *gr = sb->gr;
-        double *cl = sb->cl;
 #ifdef GPU_OMP_NUC
 #pragma omp parallel for collapse(2) schedule(static,1)
 #endif

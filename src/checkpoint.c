@@ -325,7 +325,7 @@ restoreSubblock(
     {
         allocate_float(&(sb->ce));
         allocate_float(&(sb->oce));
-        allocate_float(&(sb->cl));
+        allocate_float(&(cl));
         allocate_int(&(sb->diff_id));
         allocate_int(&(sb->nuc_id));
         allocate_int(&(sb->nuc_id2));
@@ -380,7 +380,7 @@ restoreSubblock(
 		} \
 	} while(0)
 
-#define READ_SIMPLE_FIELD(field, type) \
+#define READ_FIELD_SIMPLE(field, type) \
         do { \
                 if ( field ) { \
                         hid_t dset = H5Dopen(file_id, read_subblock_cp_path(name, #field), H5P_DEFAULT); \
@@ -391,10 +391,10 @@ restoreSubblock(
 
     READ_FIELD(temperature, H5T_NATIVE_DOUBLE);
     READ_FIELD(gr, H5T_NATIVE_INT);
-    READ_SIMPLE_FIELD(fs, H5T_NATIVE_DOUBLE);
+    READ_FIELD_SIMPLE(fs, H5T_NATIVE_DOUBLE);
     READ_FIELD(ce, H5T_NATIVE_DOUBLE);
     READ_FIELD(oce, H5T_NATIVE_DOUBLE);
-    READ_FIELD(cl, H5T_NATIVE_DOUBLE);
+    READ_FIELD_SIMPLE(cl, H5T_NATIVE_DOUBLE);
     READ_FIELD(diff_id, H5T_NATIVE_CHAR);
     READ_FIELD(mold, H5T_NATIVE_CHAR);
     READ_FIELD(d, H5T_NATIVE_DOUBLE);
@@ -1203,7 +1203,7 @@ writeTaskCheckpoint(
         WRITE_FIELD_SIMPLE(fs, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(ce, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(oce, H5T_NATIVE_DOUBLE);
-        WRITE_FIELD(cl, H5T_NATIVE_DOUBLE);
+        WRITE_FIELD_SIMPLE(cl, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(diff_id, H5T_NATIVE_CHAR);
         WRITE_FIELD(mold, H5T_NATIVE_CHAR);
         WRITE_FIELD(d, H5T_NATIVE_DOUBLE);

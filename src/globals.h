@@ -199,7 +199,6 @@ typedef struct subblock
 
 
     double *ce, *oce;
-    double *cl;
 
     double *curv;
 
@@ -234,6 +233,7 @@ typedef struct subblock
 } SB_struct;
 
 extern double *fs;
+extern double *cl;
 
 // Note, if you change this, update 'grainSetup' in grain.c
 typedef struct

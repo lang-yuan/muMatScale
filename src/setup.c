@@ -67,7 +67,7 @@ SetupInitialConditions(
 
         if (bp->calc_type == DIFFUSION)
         {
-            lsp->ce[i] = lsp->cl[i] = bp->Cinit;
+            lsp->ce[i] = cl[i] = bp->Cinit;
             lsp->nuc_id[i] = i;
             //ADD_CURV_LY
             if (bp->tip_curv == 1)
@@ -121,7 +121,7 @@ allocateFields(
     {
         allocate_float(&(lsp->ce));
         allocate_float(&(lsp->oce));
-        allocate_float(&(lsp->cl));
+        allocate_float(&(cl));
         //ADD_CURV_LY
         if (bp->tip_curv == 1)
             allocate_float(&(lsp->curv));
@@ -158,7 +158,8 @@ allocateFields(
 #endif
 
 #ifdef GPU_OMP
-#pragma omp target update to (lsp->cl[0:totaldim]) nowait
+//#pragma omp target update to (lsp->cl[0:totaldim]) nowait
+#pragma omp target enter data map(to:cl[0:totaldim])
 #pragma omp target update to (lsp->d[0:totaldim]) nowait
 //#pragma omp target update to (lsp->fs[0:totaldim]) nowait
 #pragma omp target enter data map(to:fs[0:totaldim])
