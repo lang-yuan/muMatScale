@@ -263,6 +263,7 @@ typedef struct internal_temp_ctrl
     double cool_rate;
 } internal_temp_ctrl_t;
 
+extern grain_t *grain_cache;
 
 typedef struct bbstruct
 {
@@ -279,7 +280,11 @@ typedef struct bbstruct
     uint64_t timestep;
 
     // Communication Types
+    commTypes_t intCommTypes;
+    commTypes_t floatCommTypes;
     MPI_Datatype MPI_DECENTERED;
+    commTypes_t decenteredCommTypes;
+
 
     // Constants
     calc_type_t calc_type;
@@ -305,7 +310,6 @@ typedef struct bbstruct
     double ts_delt;
 
     int num_grains;             // Count includes grain 0 -> This is the extent of the grain_cache array usage
-    grain_t *grain_cache;
     uint64_t maxTotalGrains;
     int pre_num_grains;
     int randomize_grains;

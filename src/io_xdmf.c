@@ -430,7 +430,7 @@ writeGlobalHeavyData(
     {
         for (size_t i = 0; i < ngr; i++)
         {
-            angles[i] = bp->grain_cache[i].rotang[d];
+            angles[i] = grain_cache[i].rotang[d];
         }
 
         char dsName[256] = { 0 };
