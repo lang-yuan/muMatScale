@@ -319,13 +319,9 @@ doiteration(
 
         // start communication for d
         {
-
-            //gr_dataexchange_from(lsp, NULL);
+            d_dataexchange_from(lsp, NULL);
             profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(grain_var, lsp->gr);
-            FinishExchangeForVar(grain_var, lsp->gr);
-            //gr_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            ExchangeFacesForVar(d_var, lsp->d);
         }
 
         // finish communications for dc

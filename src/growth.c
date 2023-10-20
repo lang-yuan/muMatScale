@@ -461,10 +461,6 @@ fs_change_diffuse(
 
 #ifndef FSSEP
 
-    double* cl = lsp->cl;
-    double* fs = lsp->fs;
-    int* gr = lsp->gr;
-    int* ogr = lsp->ogr;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute
 #endif
@@ -621,10 +617,6 @@ MPI_Barrier(MPI_COMM_WORLD);
 
 #ifndef GROWSEP
 
-int* gr = lsp->gr;
-double* d = lsp->d;
-decentered_t* dc = lsp->dc;
-double* fs = lsp->fs;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute
 #endif
@@ -642,7 +634,7 @@ double* fs = lsp->fs;
                 int grid = gr[idx];
 
                 // if cell part of a grain, grow it
-                if (0 && grid > 0 && grid < bp->maxTotalGrains)
+                if (grid > 0 && grid < bp->maxTotalGrains)
                 {
                     grain_t grain = grain_cache[grid];
 
@@ -917,11 +909,6 @@ MPI_Barrier(MPI_COMM_WORLD);
     }
 
     int *diff_id = lsp->diff_id;
-    double* d= lsp->d;
-    double* cl = lsp->cl;
-    decentered_t* dc = lsp->dc;
-    int* gr = lsp->gr;
-    double* fs = lsp->fs;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
 #endif

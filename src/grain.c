@@ -1202,8 +1202,6 @@ cell_nucleation(
     float *nuc_threshold = sb->nuc_threshold;
     int *nuc_id2 = sb->nuc_id2;
     int *lsindex = sb->lsindex;
-int *gr = sb->gr;
-double *cl = sb->cl;
 #ifdef GPU_OMP_NUC
 #pragma omp target map(tofrom:nindex2)
 #pragma omp teams distribute
