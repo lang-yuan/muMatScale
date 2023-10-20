@@ -335,7 +335,7 @@ restoreSubblock(
 
     // Allocate arrays for decentered octahedron information
     allocate_decentered(&(sb->dc));
-    allocate_float(&(sb->d));
+    allocate_float(&(d));
     allocate_int(&(gr));
     allocate_int(&(sb->ogr));
 
@@ -397,7 +397,7 @@ restoreSubblock(
     READ_FIELD_SIMPLE(cl, H5T_NATIVE_DOUBLE);
     READ_FIELD(diff_id, H5T_NATIVE_CHAR);
     READ_FIELD(mold, H5T_NATIVE_CHAR);
-    READ_FIELD(d, H5T_NATIVE_DOUBLE);
+    READ_FIELD_SIMPLE(d, H5T_NATIVE_DOUBLE);
     READ_FIELD(nuc_threshold, H5T_NATIVE_FLOAT);
     READ_FIELD(dc, dendriteType);
     // ADD_CURV_LY
@@ -1206,7 +1206,7 @@ writeTaskCheckpoint(
         WRITE_FIELD_SIMPLE(cl, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(diff_id, H5T_NATIVE_CHAR);
         WRITE_FIELD(mold, H5T_NATIVE_CHAR);
-        WRITE_FIELD(d, H5T_NATIVE_DOUBLE);
+        WRITE_FIELD_SIMPLE(d, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(nuc_threshold, H5T_NATIVE_FLOAT);
         WRITE_FIELD(dc, dendriteType);
 //ADD_CURV_LY

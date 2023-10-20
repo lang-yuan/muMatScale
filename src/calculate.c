@@ -226,13 +226,6 @@ doiteration(
             ExchangeFacesForVar(dc_var, lsp->dc);
         }
 
-        // start communication for d
-        {
-            d_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(d_var, lsp->d);
-        }
-
         // Produces:  temperature
         {
             tempUpdate(false);
@@ -297,6 +290,13 @@ doiteration(
             profile(CALC_GROW_OCTAHEDRA);
         }
 
+        // start communication for d
+        {
+            d_dataexchange_from(lsp, NULL);
+            profile(OFFLOADING_GPU_CPU);
+            ExchangeFacesForVar(d_var, d);
+        }
+
         // finish communications for dc
         {
             FinishExchangeForVar(dc_var, lsp->dc);
@@ -305,7 +305,7 @@ doiteration(
         }
         // finish communications for d
         {
-            FinishExchangeForVar(d_var, lsp->d);
+            FinishExchangeForVar(d_var, d);
             d_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }

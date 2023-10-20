@@ -23,6 +23,7 @@
 
 double* fs;
 double* cl;
+double* d;
 int* gr;
 
 void
@@ -91,7 +92,7 @@ d_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update to(lsp->d[0:lsp->totaldim])   //nowait
+#pragma omp target update to(d[0:lsp->totaldim])   //nowait
 #endif
 }
 
@@ -101,7 +102,7 @@ d_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update from(lsp->d[0:lsp->totaldim]) //nowait
+#pragma omp target update from(d[0:lsp->totaldim]) //nowait
 #endif
 }
 
@@ -635,7 +636,7 @@ grow_octahedra(
                     double ds1 = ABS(gx0) + ABS(gy0) + ABS(gz0);
                     ds1 = MIN(ds1, 1.5);
 
-                    lsp->d[idx] = ds1 + fs[idx] * fsgrow;
+                    d[idx] = ds1 + fs[idx] * fsgrow;
                 }
             }
         }
@@ -684,7 +685,7 @@ grow_octahedra(
         double ds1 = ABS(gx0) + ABS(gy0) + ABS(gz0);
         ds1 = MIN(ds1, 1.5);
 
-        lsp->d[idx] = ds1 + fs[idx] * fsgrow;
+        d[idx] = ds1 + fs[idx] * fsgrow;
     }
 #endif //GROWSEP
 
@@ -925,7 +926,7 @@ capture_octahedra_diffuse(
                 dy = g01 * rx1 + g11 * ry1 + g21 * rz1;
                 dz = g02 * rx1 + g12 * ry1 + g22 * rz1;
 
-                double dfs = lsp->d[ndx] - (ABS(dx) + ABS(dy) + ABS(dz));
+                double dfs = d[ndx] - (ABS(dx) + ABS(dy) + ABS(dz));
 
 #ifdef RAND_LOCAL
                 dfs += 0.05 * randnum[ndx];
@@ -945,8 +946,8 @@ capture_octahedra_diffuse(
             double ncz = 0.;
             double ncy = 0.;
 
-            double ncd = MIN(lsp->d[ndx], 1.0);
-            double dd = lsp->d[ndx] - ncd;
+            double ncd = MIN(d[ndx], 1.0);
+            double dd = d[ndx] - ncd;
 
             /* determine which corner the new capture cell is close to */
             if (dx + dy >= 0 && dx - dy > 0 && dx + dz > 0 && dx - dz >= 0)
@@ -1089,7 +1090,7 @@ capture_octahedra_diffuse(
 
                                 double ds = ABS(dx) + ABS(dy) + ABS(dz);
 
-                                double dfs = lsp->d[ndx] - ds;
+                                double dfs = d[ndx] - ds;
                                 //  dfs += 0.05 * getRandScale();
 
                                 if (dfs > 0)
@@ -1097,9 +1098,9 @@ capture_octahedra_diffuse(
                                     double ncx, ncz, ncy;
                                     capt = 1;
 
-                                    double ncd = MIN(lsp->d[ndx], 1.0);
+                                    double ncd = MIN(d[ndx], 1.0);
 
-                                    double dd = lsp->d[ndx] - ncd;
+                                    double dd = d[ndx] - ncd;
 
                                     /* determine which corner the new capture cell is close to */
                                     if (dx + dy >= 0 && dx - dy > 0
