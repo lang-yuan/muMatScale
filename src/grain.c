@@ -374,7 +374,7 @@ createGrains(
             sx + sy * (bp->gsdimx + 2) + sz * (bp->gsdimx + 2) * (bp->gsdimy +
                                                                   2);
         SB_struct *sb = lsp;
-        gr[idx] = gr_num;
+        sb->gr[idx] = gr_num;
 
         /* Step 2 */
         int found = 0;
@@ -703,6 +703,8 @@ calculateGrainSizes(
     SB_struct * sb,
     size_t * sizes)
 {
+    int *gr = sb->gr;
+
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
@@ -1020,6 +1022,8 @@ cell_nucleation(
     void * __attribute__ ((__unused__)) __unused)
 {
     double *cl = lsp->cl;
+    int *gr = lsp->gr;
+
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;

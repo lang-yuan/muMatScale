@@ -58,7 +58,7 @@ SetupInitialConditions(
     // Initialize the grains to 0 and fraction solid to 0
     for (int i = 0; i < full_volume; i++)
     {
-        gr[i] = 0;
+        lsp->gr[i] = 0;
         lsp->ogr[i] = 0;
         lsp->fs[i] = 0;
         lsp->d[i] = 0;
@@ -144,7 +144,7 @@ allocateFields(
     allocate_decentered(&(lsp->dc));
     allocate_float(&(lsp->d));
 
-    allocate_int(&(gr));
+    allocate_int(&(lsp->gr));
     allocate_int(&(lsp->ogr));
 
     allocate_int(&(lsp->lsindex));
@@ -168,7 +168,7 @@ double *fs = lsp->fs;
 #pragma omp target enter data map(to:fs[0:totaldim])
 decentered_t *dc = lsp->dc;
 #pragma omp target enter data map(to:dc[0:totaldim])
-//#pragma omp target update to (lsp->gr[0:totaldim]) nowait
+int *gr = lsp->gr;
 #pragma omp target enter data map(to:gr[0:totaldim])
 #pragma omp target update to (lsp->lsindex[0:totaldim])
 

@@ -616,7 +616,7 @@ xdmf_writeSubblocks(
                                 H5T_NATIVE_INT, dataspace, link_pl,
                                 dataspace_pl, H5P_DEFAULT);
         H5Dwrite(grain, H5T_NATIVE_INT, memspace, H5S_ALL, H5P_DEFAULT,
-                 gr);
+                 sb->gr);
         H5Dclose(grain);
 
                 /***** Fraction Solid *****/

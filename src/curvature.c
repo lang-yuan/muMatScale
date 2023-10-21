@@ -86,7 +86,7 @@ sb_curvature(
             {
                 idx = k * kgap + j * jgap + i;
                 lsp->curv[idx] = 0.0;
-                if ((lsp->mold[idx]) || (gr[idx] <= 0)
+                if ((lsp->mold[idx]) || (lsp->gr[idx] <= 0)
                     || (lsp->fs[idx] == 0))
                 {
                     continue;
@@ -96,7 +96,7 @@ sb_curvature(
                 {
                     int ndx = (k + nn[n][2]) * kgap +
                         (j + nn[n][1]) * jgap + (i + nn[n][0]);
-                    nbindex += gr[ndx];
+                    nbindex += lsp->gr[ndx];
                 }
                 //Ensure the curvautre is only calcuated on the interface
                 if (nbindex ? 1 : 0)

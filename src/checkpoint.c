@@ -336,7 +336,7 @@ restoreSubblock(
     // Allocate arrays for decentered octahedron information
     allocate_decentered(&(sb->dc));
     allocate_float(&(sb->d));
-    allocate_int(&(gr));
+    allocate_int(&(sb->gr));
     allocate_int(&(sb->ogr));
 
 
@@ -390,7 +390,7 @@ restoreSubblock(
         } while(0)
 
     READ_FIELD(temperature, H5T_NATIVE_DOUBLE);
-    READ_FIELD_SIMPLE(gr, H5T_NATIVE_INT);
+    READ_FIELD(gr, H5T_NATIVE_INT);
     READ_FIELD(fs, H5T_NATIVE_DOUBLE);
     READ_FIELD(ce, H5T_NATIVE_DOUBLE);
     READ_FIELD(oce, H5T_NATIVE_DOUBLE);
@@ -1199,7 +1199,7 @@ writeTaskCheckpoint(
                 } while(0)
 
         WRITE_FIELD(temperature, H5T_NATIVE_DOUBLE);
-        WRITE_FIELD_SIMPLE(gr, H5T_NATIVE_INT);
+        WRITE_FIELD(gr, H5T_NATIVE_INT);
         WRITE_FIELD(fs, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(ce, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(oce, H5T_NATIVE_DOUBLE);

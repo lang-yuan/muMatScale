@@ -21,8 +21,6 @@
 #include "omp.h"
 #include "xmalloc.h"
 
-int* gr;
-
 void
 fs_dataexchange_to(
     SB_struct * lsp,
@@ -73,6 +71,7 @@ gr_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
+int* gr = lsp->gr;
 #pragma omp target update to(gr[0:lsp->totaldim])  //nowait
 #endif
 }
@@ -83,6 +82,7 @@ gr_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
+int* gr = lsp->gr;
 #pragma omp target update from(gr[0:lsp->totaldim])        //nowait
 #endif
 }
@@ -312,6 +312,8 @@ pre_cell_reduction(
     double *fs = lsp->fs;
     double *cl = lsp->cl;
     int *diff_id = lsp->diff_id;
+    int* gr = lsp->gr;
+
 #if defined(GPU_OMP)
 #pragma omp target map(tofrom:gindex, nindex, fsindex)
 #pragma omp teams distribute
@@ -455,6 +457,8 @@ fs_change_diffuse(
     double* cl = lsp->cl;
     double *temperature = lsp->temperature;
     int* ogr = lsp->ogr;
+    int* gr = lsp->gr;
+
 #ifndef FSSEP
 
 #if defined(GPU_OMP)
@@ -605,6 +609,8 @@ grow_octahedra(
     double* fs = lsp->fs;
     double* d = lsp->d;
     decentered_t* dc = lsp->dc;
+    int *gr = lsp->gr;
+
 #ifndef GROWSEP
 
 #if defined(GPU_OMP)
@@ -729,6 +735,8 @@ grow_cell_reduction(
     int8_t *mold = lsp->mold;
     int *diff_id = lsp->diff_id;
     int *nuc_id = lsp->nuc_id;
+    int *gr = lsp->gr;
+ 
 #if defined(GPU_OMP)
 #pragma omp target map(tofrom:gindex, nindex)
 #pragma omp teams distribute
@@ -807,6 +815,7 @@ capture_octahedra_diffuse(
 {
     double* d = lsp->d;
     decentered_t* dc = lsp->dc;
+    int *gr = lsp->gr;
 
     double *solid_volume = (double *) vsolid_volume;
     double sum_fs = 0.0;

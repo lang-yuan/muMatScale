@@ -247,7 +247,7 @@ writevtu(
     // Cell data
     fprintf(fp, "        <CellData>\n");
     writeDataArrayFloat(fp, sb->temperature, "Temperature");
-    writeDataArrayInt32(fp, gr, "Grain");
+    writeDataArrayInt32(fp, sb->gr, "Grain");
     fprintf(fp, "      </CellData>\n");
 
 

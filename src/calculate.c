@@ -248,8 +248,8 @@ doiteration(
         }
 
         {
-            ExchangeFacesForVar(grain_var, gr);
-            FinishExchangeForVar(grain_var, gr);
+            ExchangeFacesForVar(grain_var, lsp->gr);
+            FinishExchangeForVar(grain_var, lsp->gr);
             gr_dataexchange_to(lsp, NULL);
             profile(OFFLOADING_CPU_GPU);
         }
