@@ -197,6 +197,7 @@ typedef struct subblock
     int8_t *mold;
     size_t mold_size;
 
+
     double *fs;
     double *ce, *oce;
     double *cl;
@@ -217,7 +218,7 @@ typedef struct subblock
     // Decentered octahedron variables
     decentered_t *dc;
     double *d;                  // diagonal of decentered octahedron
-    int *gr; // grain number
+    int *gr;                    // grain number
 
     int *ogr;                   /// added to make sure it won't double use the gr number... ly
 
@@ -232,6 +233,7 @@ typedef struct subblock
     int *lsindex;
 
 } SB_struct;
+
 
 // Note, if you change this, update 'grainSetup' in grain.c
 typedef struct

@@ -14,7 +14,7 @@ exe = sys.argv[nargs-2]
 inp = sys.argv[nargs-1]
 
 #run CA code
-command = "{} {} {} {}".format(mpicmd,exe,"-c",inp)
+command = "{} {} {} {} {}".format(mpicmd,exe,"-i","-c",inp)
 print("Run command: {}".format(command))
 
 output = subprocess.check_output(command,shell=True)
