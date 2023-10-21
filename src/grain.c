@@ -1019,6 +1019,7 @@ cell_nucleation(
     SB_struct * sb,
     void * __attribute__ ((__unused__)) __unused)
 {
+    double *cl = lsp->cl;
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;

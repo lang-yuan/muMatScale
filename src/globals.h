@@ -197,8 +197,9 @@ typedef struct subblock
     int8_t *mold;
     size_t mold_size;
 
-
+    double *fs;
     double *ce, *oce;
+    double *cl;
 
     double *curv;
 
@@ -227,8 +228,6 @@ typedef struct subblock
 
 } SB_struct;
 
-extern double *fs;
-extern double *cl;
 extern int *gr; // grain number
 extern    double *d;                  // diagonal of decentered octahedron
 // Decentered octahedron variables

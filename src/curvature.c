@@ -87,7 +87,7 @@ sb_curvature(
                 idx = k * kgap + j * jgap + i;
                 lsp->curv[idx] = 0.0;
                 if ((lsp->mold[idx]) || (gr[idx] <= 0)
-                    || (fs[idx] == 0))
+                    || (lsp->fs[idx] == 0))
                 {
                     continue;
                 }
@@ -136,52 +136,52 @@ sb_curvature(
                     iddfl = iddf + 1;
 
                     fsl =
-                        (fs[idufl] + fs[idubl] + fs[iddbl] +
-                         fs[iddfl] + alpha * (fs[idul] +
-                                                   fs[iddl] +
-                                                   fs[idfl] +
-                                                   fs[idbl]) +
-                         beta * fs[idl]) / (1 + 4 * alpha + beta);
+                        (lsp->fs[idufl] + lsp->fs[idubl] + lsp->fs[iddbl] +
+                         lsp->fs[iddfl] + alpha * (lsp->fs[idul] +
+                                                   lsp->fs[iddl] +
+                                                   lsp->fs[idfl] +
+                                                   lsp->fs[idbl]) +
+                         beta * lsp->fs[idl]) / (1 + 4 * alpha + beta);
 
                     fsr =
-                        (fs[idufr] + fs[idubr] + fs[iddbr] +
-                         fs[iddfr] + alpha * (fs[idur] +
-                                                   fs[iddr] +
-                                                   fs[idfr] +
-                                                   fs[idbr]) +
-                         beta * fs[idr]) / (1 + 4 * alpha + beta);
+                        (lsp->fs[idufr] + lsp->fs[idubr] + lsp->fs[iddbr] +
+                         lsp->fs[iddfr] + alpha * (lsp->fs[idur] +
+                                                   lsp->fs[iddr] +
+                                                   lsp->fs[idfr] +
+                                                   lsp->fs[idbr]) +
+                         beta * lsp->fs[idr]) / (1 + 4 * alpha + beta);
 
                     fsf =
-                        (fs[idufl] + fs[idufr] + fs[iddfr] +
-                         fs[iddfl] + alpha * (fs[idfl] +
-                                                   fs[idfr] +
-                                                   fs[iduf] +
-                                                   fs[iddf]) +
-                         beta * fs[idf]) / (1 + 4 * alpha + beta);
+                        (lsp->fs[idufl] + lsp->fs[idufr] + lsp->fs[iddfr] +
+                         lsp->fs[iddfl] + alpha * (lsp->fs[idfl] +
+                                                   lsp->fs[idfr] +
+                                                   lsp->fs[iduf] +
+                                                   lsp->fs[iddf]) +
+                         beta * lsp->fs[idf]) / (1 + 4 * alpha + beta);
 
                     fsb =
-                        (fs[idubr] + fs[idubl] + fs[iddbl] +
-                         fs[iddbr] + alpha * (fs[idbl] +
-                                                   fs[idbr] +
-                                                   fs[idub] +
-                                                   fs[iddb]) +
-                         beta * fs[idb]) / (1 + 4 * alpha + beta);
+                        (lsp->fs[idubr] + lsp->fs[idubl] + lsp->fs[iddbl] +
+                         lsp->fs[iddbr] + alpha * (lsp->fs[idbl] +
+                                                   lsp->fs[idbr] +
+                                                   lsp->fs[idub] +
+                                                   lsp->fs[iddb]) +
+                         beta * lsp->fs[idb]) / (1 + 4 * alpha + beta);
 
                     fsu =
-                        (fs[idufl] + fs[idufr] + fs[idubr] +
-                         fs[idubl] + alpha * (fs[idul] +
-                                                   fs[idur] +
-                                                   fs[idub] +
-                                                   fs[iduf]) +
-                         beta * fs[idl]) / (1 + 4 * alpha + beta);
+                        (lsp->fs[idufl] + lsp->fs[idufr] + lsp->fs[idubr] +
+                         lsp->fs[idubl] + alpha * (lsp->fs[idul] +
+                                                   lsp->fs[idur] +
+                                                   lsp->fs[idub] +
+                                                   lsp->fs[iduf]) +
+                         beta * lsp->fs[idl]) / (1 + 4 * alpha + beta);
 
                     fsd =
-                        (fs[iddbr] + fs[iddbl] + fs[iddfl] +
-                         fs[iddfr] + alpha * (fs[iddr] +
-                                                   fs[iddl] +
-                                                   fs[iddf] +
-                                                   fs[iddb]) +
-                         beta * fs[idd]) / (1 + 4 * alpha + beta);
+                        (lsp->fs[iddbr] + lsp->fs[iddbl] + lsp->fs[iddfl] +
+                         lsp->fs[iddfr] + alpha * (lsp->fs[iddr] +
+                                                   lsp->fs[iddl] +
+                                                   lsp->fs[iddf] +
+                                                   lsp->fs[iddb]) +
+                         beta * lsp->fs[idd]) / (1 + 4 * alpha + beta);
 
                     normal_x = (fsl - fsr) / 2.0;
                     normal_y = (fsf - fsb) / 2.0;
@@ -236,15 +236,15 @@ sb_curvature(
 
                             for (n = -t; n <= t; n++)
                             {
-                                h += fs[idx + kgap * n];
-                                hf += fs[idf + kgap * n];
-                                hb += fs[idb + kgap * n];
-                                hl += fs[idl + kgap * n];
-                                hr += fs[idr + kgap * n];
-                                hfl += fs[idfl + kgap * n];
-                                hfr += fs[idfr + kgap * n];
-                                hbr += fs[idbr + kgap * n];
-                                hbl += fs[idbl + kgap * n];
+                                h += lsp->fs[idx + kgap * n];
+                                hf += lsp->fs[idf + kgap * n];
+                                hb += lsp->fs[idb + kgap * n];
+                                hl += lsp->fs[idl + kgap * n];
+                                hr += lsp->fs[idr + kgap * n];
+                                hfl += lsp->fs[idfl + kgap * n];
+                                hfr += lsp->fs[idfr + kgap * n];
+                                hbr += lsp->fs[idbr + kgap * n];
+                                hbl += lsp->fs[idbl + kgap * n];
                             }
 
                             hx = (gamma * (hfl - hfr) + hl - hr +
@@ -293,15 +293,15 @@ sb_curvature(
 
                             for (n = -t; n <= t; n++)
                             {
-                                h += fs[idx + jgap * n];
-                                hu += fs[idu + jgap * n];
-                                hd += fs[idd + jgap * n];
-                                hl += fs[idl + jgap * n];
-                                hr += fs[idr + jgap * n];
-                                hul += fs[idul + jgap * n];
-                                hur += fs[idur + jgap * n];
-                                hdr += fs[iddr + jgap * n];
-                                hdl += fs[iddl + jgap * n];
+                                h += lsp->fs[idx + jgap * n];
+                                hu += lsp->fs[idu + jgap * n];
+                                hd += lsp->fs[idd + jgap * n];
+                                hl += lsp->fs[idl + jgap * n];
+                                hr += lsp->fs[idr + jgap * n];
+                                hul += lsp->fs[idul + jgap * n];
+                                hur += lsp->fs[idur + jgap * n];
+                                hdr += lsp->fs[iddr + jgap * n];
+                                hdl += lsp->fs[iddl + jgap * n];
                             }
 
                             hx = (gamma * (hul - hur) + hl - hr +
@@ -352,15 +352,15 @@ sb_curvature(
 
                             for (n = -t; n <= t; n++)
                             {
-                                h += fs[idx + n];
-                                hu += fs[idu + n];
-                                hd += fs[idd + n];
-                                hf += fs[idf + n];
-                                hb += fs[idb + n];
-                                huf += fs[iduf + n];
-                                hub += fs[idub + n];
-                                hdb += fs[iddb + n];
-                                hdf += fs[iddf + n];
+                                h += lsp->fs[idx + n];
+                                hu += lsp->fs[idu + n];
+                                hd += lsp->fs[idd + n];
+                                hf += lsp->fs[idf + n];
+                                hb += lsp->fs[idb + n];
+                                huf += lsp->fs[iduf + n];
+                                hub += lsp->fs[idub + n];
+                                hdb += lsp->fs[iddb + n];
+                                hdf += lsp->fs[iddf + n];
                             }
 
                             hx = (gamma * (huf - hub) + hf - hb +

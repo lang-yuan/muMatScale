@@ -316,7 +316,7 @@ restoreSubblock(
 
     xmalloc(sb, SB_struct, 1);
     allocate_byte(&sb->mold);
-    allocate_float(&(fs));
+    allocate_float(&(sb->fs));
     xmalloc(sb->nuc_threshold, float,
               (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2));
     allocate_float(&(sb->temperature));
@@ -325,7 +325,7 @@ restoreSubblock(
     {
         allocate_float(&(sb->ce));
         allocate_float(&(sb->oce));
-        allocate_float(&(cl));
+        allocate_float(&(sb->cl));
         allocate_int(&(sb->diff_id));
         allocate_int(&(sb->nuc_id));
         allocate_int(&(sb->nuc_id2));
@@ -391,10 +391,10 @@ restoreSubblock(
 
     READ_FIELD(temperature, H5T_NATIVE_DOUBLE);
     READ_FIELD_SIMPLE(gr, H5T_NATIVE_INT);
-    READ_FIELD_SIMPLE(fs, H5T_NATIVE_DOUBLE);
+    READ_FIELD(fs, H5T_NATIVE_DOUBLE);
     READ_FIELD(ce, H5T_NATIVE_DOUBLE);
     READ_FIELD(oce, H5T_NATIVE_DOUBLE);
-    READ_FIELD_SIMPLE(cl, H5T_NATIVE_DOUBLE);
+    READ_FIELD(cl, H5T_NATIVE_DOUBLE);
     READ_FIELD(diff_id, H5T_NATIVE_CHAR);
     READ_FIELD(mold, H5T_NATIVE_CHAR);
     READ_FIELD_SIMPLE(d, H5T_NATIVE_DOUBLE);
@@ -1200,10 +1200,10 @@ writeTaskCheckpoint(
 
         WRITE_FIELD(temperature, H5T_NATIVE_DOUBLE);
         WRITE_FIELD_SIMPLE(gr, H5T_NATIVE_INT);
-        WRITE_FIELD_SIMPLE(fs, H5T_NATIVE_DOUBLE);
+        WRITE_FIELD(fs, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(ce, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(oce, H5T_NATIVE_DOUBLE);
-        WRITE_FIELD_SIMPLE(cl, H5T_NATIVE_DOUBLE);
+        WRITE_FIELD(cl, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(diff_id, H5T_NATIVE_CHAR);
         WRITE_FIELD(mold, H5T_NATIVE_CHAR);
         WRITE_FIELD_SIMPLE(d, H5T_NATIVE_DOUBLE);

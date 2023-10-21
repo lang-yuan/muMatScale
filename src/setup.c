@@ -60,14 +60,14 @@ SetupInitialConditions(
     {
         gr[i] = 0;
         lsp->ogr[i] = 0;
-        fs[i] = 0;
+        lsp->fs[i] = 0;
         d[i] = 0;
         lsp->nuc_threshold[i] = INFINITY;
         lsp->lsindex[i] = 1;
 
         if (bp->calc_type == DIFFUSION)
         {
-            lsp->ce[i] = cl[i] = bp->Cinit;
+            lsp->ce[i] = lsp->cl[i] = bp->Cinit;
             lsp->nuc_id[i] = i;
             //ADD_CURV_LY
             if (bp->tip_curv == 1)
@@ -111,7 +111,7 @@ allocateFields(
     )
 {
     allocate_byte(&lsp->mold);
-    allocate_float(&(fs));
+    allocate_float(&(lsp->fs));
 
     xmalloc(lsp->nuc_threshold, float,
               (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2));
@@ -121,7 +121,7 @@ allocateFields(
     {
         allocate_float(&(lsp->ce));
         allocate_float(&(lsp->oce));
-        allocate_float(&(cl));
+        allocate_float(&(lsp->cl));
         //ADD_CURV_LY
         if (bp->tip_curv == 1)
             allocate_float(&(lsp->curv));
@@ -159,10 +159,12 @@ allocateFields(
 
 #ifdef GPU_OMP
 //#pragma omp target update to (lsp->cl[0:totaldim]) nowait
+double *cl = lsp->cl;
 #pragma omp target enter data map(to:cl[0:totaldim])
 //#pragma omp target update to (lsp->d[0:totaldim]) nowait
 #pragma omp target enter data map(to:d[0:totaldim])
 //#pragma omp target update to (lsp->fs[0:totaldim]) nowait
+double *fs = lsp->fs;
 #pragma omp target enter data map(to:fs[0:totaldim])
 //#pragma omp target update to (lsp->dc[0:totaldim]) nowait
 #pragma omp target enter data map(to:dc[0:totaldim])

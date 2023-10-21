@@ -624,7 +624,7 @@ xdmf_writeSubblocks(
                              H5T_NATIVE_DOUBLE, dataspace, link_pl,
                              dataspace_pl, H5P_DEFAULT);
         H5Dwrite(fsd, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
-                 fs);
+                 sb->fs);
         H5Dclose(fsd);
     }
 
