@@ -444,6 +444,7 @@ fs_change_diffuse(
     double *oce = lsp->oce;
     double *ce = lsp->ce;
     double *temperature = lsp->temperature;
+    int* ogr = lsp->ogr;
 #ifndef FSSEP
 
 #if defined(GPU_OMP)
@@ -469,7 +470,7 @@ fs_change_diffuse(
                 if (gr[idx] <= 0 || Tcell < 1.0 || Tcell > Tliq)
                 {
                     cl[idx] = ce[idx];
-                    lsp->ogr[idx] = 0;
+                    ogr[idx] = 0;
                     gr[idx] = 0;
                     fs[idx] = 0;
                     continue;
@@ -509,7 +510,7 @@ fs_change_diffuse(
                 {
                     fs[idx] = 0.;
                     gr[idx] = 0;
-                    lsp->ogr[idx] = 0;
+                    ogr[idx] = 0;
                     dfs = 0;
                     cl[idx] = ce[idx];
                 }
