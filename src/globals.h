@@ -214,6 +214,10 @@ typedef struct subblock
     int totaldim;
     //int nindex;
 
+    // Decentered octahedron variables
+    decentered_t *dc;
+    double *d;                  // diagonal of decentered octahedron
+
     int *ogr;                   /// added to make sure it won't double use the gr number... ly
 
     float *nuc_threshold;
@@ -229,9 +233,6 @@ typedef struct subblock
 } SB_struct;
 
 extern int *gr; // grain number
-extern    double *d;                  // diagonal of decentered octahedron
-// Decentered octahedron variables
-extern decentered_t *dc;
 
 // Note, if you change this, update 'grainSetup' in grain.c
 typedef struct

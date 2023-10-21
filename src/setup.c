@@ -61,7 +61,7 @@ SetupInitialConditions(
         gr[i] = 0;
         lsp->ogr[i] = 0;
         lsp->fs[i] = 0;
-        d[i] = 0;
+        lsp->d[i] = 0;
         lsp->nuc_threshold[i] = INFINITY;
         lsp->lsindex[i] = 1;
 
@@ -141,8 +141,8 @@ allocateFields(
     }
 
     // Allocate arrays for decentered octahedron information
-    allocate_decentered(&(dc));
-    allocate_float(&(d));
+    allocate_decentered(&(lsp->dc));
+    allocate_float(&(lsp->d));
 
     allocate_int(&(gr));
     allocate_int(&(lsp->ogr));
@@ -161,12 +161,12 @@ allocateFields(
 //#pragma omp target update to (lsp->cl[0:totaldim]) nowait
 double *cl = lsp->cl;
 #pragma omp target enter data map(to:cl[0:totaldim])
-//#pragma omp target update to (lsp->d[0:totaldim]) nowait
+double *d = lsp->d;
 #pragma omp target enter data map(to:d[0:totaldim])
 //#pragma omp target update to (lsp->fs[0:totaldim]) nowait
 double *fs = lsp->fs;
 #pragma omp target enter data map(to:fs[0:totaldim])
-//#pragma omp target update to (lsp->dc[0:totaldim]) nowait
+decentered_t *dc = lsp->dc;
 #pragma omp target enter data map(to:dc[0:totaldim])
 //#pragma omp target update to (lsp->gr[0:totaldim]) nowait
 #pragma omp target enter data map(to:gr[0:totaldim])

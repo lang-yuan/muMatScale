@@ -21,9 +21,7 @@
 #include "omp.h"
 #include "xmalloc.h"
 
-double* d;
 int* gr;
-decentered_t *dc;
 
 void
 fs_dataexchange_to(
@@ -95,6 +93,7 @@ d_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
+double* d = lsp->d;
 #pragma omp target update to(d[0:lsp->totaldim])   //nowait
 #endif
 }
@@ -105,6 +104,7 @@ d_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
+double* d = lsp->d;
 #pragma omp target update from(d[0:lsp->totaldim]) //nowait
 #endif
 }
@@ -115,6 +115,7 @@ dc_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
+decentered_t* dc = lsp->dc;
 #pragma omp target update to(dc[0:lsp->totaldim])  //nowait
 #endif
 }
@@ -125,6 +126,7 @@ dc_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
+decentered_t* dc = lsp->dc;
 #pragma omp target update from(dc[0:lsp->totaldim])        //nowait
 #endif
 }
@@ -601,6 +603,8 @@ grow_octahedra(
     int totaldim = (dimx + 2) * (dimy + 2) * (dimz + 2);
 
     double* fs = lsp->fs;
+    double* d = lsp->d;
+    decentered_t* dc = lsp->dc;
 #ifndef GROWSEP
 
 #if defined(GPU_OMP)
@@ -801,6 +805,9 @@ capture_octahedra_diffuse(
     SB_struct * lsp,
     void *vsolid_volume)
 {
+    double* d = lsp->d;
+    decentered_t* dc = lsp->dc;
+
     double *solid_volume = (double *) vsolid_volume;
     double sum_fs = 0.0;
     uint64_t solid_count = 0;
