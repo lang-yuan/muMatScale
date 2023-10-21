@@ -26,8 +26,6 @@ typedef struct tasks_s
 } tasks_t;
 
 
-void outputscreen(
-    );
 void outputvis(
     );
 void init_gmsp(
