@@ -154,16 +154,11 @@ allocateFields(
 
 #ifdef GPU_OMP
     int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
-//#pragma omp target enter data map(to:lsp[0:1]) nowait
-#endif
 
-#ifdef GPU_OMP
-//#pragma omp target update to (lsp->cl[0:totaldim]) nowait
 double *cl = lsp->cl;
 #pragma omp target enter data map(to:cl[0:totaldim])
 double *d = lsp->d;
 #pragma omp target enter data map(to:d[0:totaldim])
-//#pragma omp target update to (lsp->fs[0:totaldim]) nowait
 double *fs = lsp->fs;
 #pragma omp target enter data map(to:fs[0:totaldim])
 decentered_t *dc = lsp->dc;

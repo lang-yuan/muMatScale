@@ -380,15 +380,6 @@ restoreSubblock(
 		} \
 	} while(0)
 
-#define READ_FIELD_SIMPLE(field, type) \
-        do { \
-                if ( field ) { \
-                        hid_t dset = H5Dopen(file_id, read_subblock_cp_path(name, #field), H5P_DEFAULT); \
-                        H5Dread(dset, type, memspace, H5S_ALL, H5P_DEFAULT, field); \
-                        H5Dclose(dset); \
-                } \
-        } while(0)
-
     READ_FIELD(temperature, H5T_NATIVE_DOUBLE);
     READ_FIELD(gr, H5T_NATIVE_INT);
     READ_FIELD(fs, H5T_NATIVE_DOUBLE);
@@ -1187,16 +1178,6 @@ writeTaskCheckpoint(
 				H5Dclose(dset); \
 			} \
 		} while(0)
-#define WRITE_FIELD_SIMPLE(name, type) \
-                do { \
-                        /* Only write ones that exist */ \
-                        if ( name ) \
-                        { \
-                                hid_t dset = H5Dcreate(subgroup, #name, type, dataspace, link_pl, dataspace_pl, H5P_DEFAULT); \
-                                H5Dwrite(dset, type, memspace, H5S_ALL, H5P_DEFAULT, name); \
-                                H5Dclose(dset); \
-                        } \
-                } while(0)
 
         WRITE_FIELD(temperature, H5T_NATIVE_DOUBLE);
         WRITE_FIELD(gr, H5T_NATIVE_INT);

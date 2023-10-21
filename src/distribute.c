@@ -188,16 +188,16 @@ clearSubblocks(
     SB_struct *s = lsp;
     if (s->mold)
         xfree(s->mold);
-    //if (s->fs)
-    //    xfree(s->fs);
+    if (s->fs)
+        xfree(s->fs);
     if (s->nuc_threshold)
         xfree(s->nuc_threshold);
     if (s->ce)
         xfree(s->ce);
     if (s->oce)
         xfree(s->oce);
-    //if (s->cl)
-    //    xfree(s->cl);
+    if (s->cl)
+        xfree(s->cl);
     if (s->diff_id)
         xfree(s->diff_id);
     if (s->fs_id)
@@ -206,12 +206,12 @@ clearSubblocks(
         xfree(s->nuc_id);
     if (s->nuc_id2)
         xfree(s->nuc_id2);
-    //if (s->dc)
-    //    xfree(s->dc);
-    //if (s->d)
-    //    xfree(s->d);
-    //if (s->gr)
-    //    xfree(s->gr);
+    if (s->dc)
+        xfree(s->dc);
+    if (s->d)
+        xfree(s->d);
+    if (s->gr)
+        xfree(s->gr);
     if (s->ogr)
         xfree(s->ogr);
     if (s->temperature)
