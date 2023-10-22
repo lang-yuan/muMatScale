@@ -354,7 +354,7 @@ doiteration(
             gsolid_volume += solid_volume;
             timing(COMPUTATION, timer_elapsed());
         }
-MPI_Barrier(MPI_COMM_WORLD);
+//MPI_Barrier(MPI_COMM_WORLD);
 //printf("iteration done...\n");
 //  fflush(stdout);
     }

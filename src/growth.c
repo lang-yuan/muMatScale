@@ -598,9 +598,6 @@ grow_octahedra(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused)
 {
-MPI_Barrier(MPI_COMM_WORLD);
-//printf("grow_octahedra...\n");
-//fflush(stdout);
 
     const int dimx = bp->gsdimx;
     const int dimy = bp->gsdimy;
@@ -716,8 +713,6 @@ MPI_Barrier(MPI_COMM_WORLD);
         d[idx] = ds1 + fs[idx] * fsgrow;
     }
 #endif //GROWSEP
-MPI_Barrier(MPI_COMM_WORLD);
-//printf("almost done...\n");
 
     int *ogr = lsp->ogr;
 #if defined(GPU_OMP)
@@ -727,8 +722,6 @@ MPI_Barrier(MPI_COMM_WORLD);
     {
         ogr[i] = gr[i];
     }
-MPI_Barrier(MPI_COMM_WORLD);
-//printf("done...\n");
 
 }
 
@@ -737,10 +730,6 @@ grow_cell_reduction(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused)
 {
-MPI_Barrier(MPI_COMM_WORLD);
-//printf("grow_cell_reduction...\n");
-//fflush(stdout);
-
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
@@ -830,9 +819,6 @@ capture_octahedra_diffuse(
     double* d = lsp->d;
     decentered_t* dc = lsp->dc;
     int *gr = lsp->gr;
-MPI_Barrier(MPI_COMM_WORLD);
-//printf("capture_octahedra_diffuse...\n");
-//fflush(stdout);
 
     double *solid_volume = (double *) vsolid_volume;
     double sum_fs = 0.0;
@@ -1042,9 +1028,6 @@ MPI_Barrier(MPI_COMM_WORLD);
         }
     }
 
-MPI_Barrier(MPI_COMM_WORLD);
-//printf("update dc...\n");
-//fflush(stdout);
     // update lsp->dc
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
@@ -1057,10 +1040,6 @@ MPI_Barrier(MPI_COMM_WORLD);
         dc[idx].y = dc_tmp[i].y;
         dc[idx].z = dc_tmp[i].z;
     }
-
-MPI_Barrier(MPI_COMM_WORLD);
-//printf("sum fs...\n");
-//fflush(stdout);
 
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for collapse(3) reduction(+:sum_fs) schedule(static,1)
@@ -1238,9 +1217,6 @@ MPI_Barrier(MPI_COMM_WORLD);
     }
 
 #endif //INDEX_SEP
-MPI_Barrier(MPI_COMM_WORLD);
-//printf("fs = %le\n",sum_fs);
-//fflush(stdout);
     (*solid_volume) += sum_fs * pow(bp->cellSize, 3.0);
     dwrite(DEBUG_TASK_CTRL, "(sb: %d) Returning %lu solids\n",
            lsp->subblockid, solid_count);
