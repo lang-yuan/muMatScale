@@ -234,22 +234,16 @@ doiteration(
     {
         // start communication for cl
         {
-            cl_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(cl_var, lsp->cl);
         }
 
         // start communication for fs
         {
-            fs_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(fs_var, lsp->fs);
         }
 
         // start communication for dc
         {
-            dc_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(dc_var, lsp->dc);
         }
 
@@ -269,27 +263,30 @@ doiteration(
         {
             // update gr on CPU before ops on gr
             gr_dataexchange_from(lsp, NULL);
+            profile(OFFLOADING_GPU_CPU);
+
             activateNewGrains();
             profile(GRAIN_ACTIVATION);
             gr_dataexchange_to(lsp, NULL);
+            profile(OFFLOADING_GPU_CPU);
         }
 
         {
             ExchangeFacesForVar(grain_var, lsp->gr);
-            FinishExchangeForVar(grain_var, lsp->gr);
-            gr_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
         }
 
         {
             FinishExchangeForVar(cl_var, lsp->cl);
-            cl_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
         {
             FinishExchangeForVar(fs_var, lsp->fs);
-            fs_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
+        }
+
+        {
+            FinishExchangeForVar(grain_var, lsp->gr);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
         // Uses No Halo: ce
@@ -319,22 +316,18 @@ doiteration(
 
         // start communication for d
         {
-            d_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(d_var, lsp->d);
         }
 
         // finish communications for dc
         {
             FinishExchangeForVar(dc_var, lsp->dc);
-            dc_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
         // finish communications for d
         {
             FinishExchangeForVar(d_var, lsp->d);
-            d_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
 #ifdef INDEX_SEP
@@ -354,9 +347,6 @@ doiteration(
             gsolid_volume += solid_volume;
             timing(COMPUTATION, timer_elapsed());
         }
-//MPI_Barrier(MPI_COMM_WORLD);
-//printf("iteration done...\n");
-//  fflush(stdout);
     }
 
     timing(COMPUTATION, timer_elapsed());

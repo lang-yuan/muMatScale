@@ -21,7 +21,7 @@ pack_double(
     double *buffer)
 {
 #ifdef GPU_PACK
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
@@ -42,7 +42,7 @@ pack_int(
     int *buffer)
 {
 #ifdef GPU_PACK
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
@@ -66,7 +66,7 @@ pack_3double(
     const int stride3 = 3 * stride;
     const int bsize3 = 3 * bsize;
 #ifdef GPU_PACK
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize3; j++)
@@ -75,7 +75,7 @@ pack_3double(
         }
 
 #ifdef GPU_PACK
-#pragma omp target update from(buffer[0:nblocks*bsize])
+#pragma omp target update from(buffer[0:nblocks*bsize3])
 #endif
 }
 
@@ -120,7 +120,7 @@ unpack_double(
 {
 #ifdef GPU_PACK
 #pragma omp target update to(buffer[0:nblocks*bsize])
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
@@ -138,7 +138,7 @@ unpack_int(
 {
 #ifdef GPU_PACK
 #pragma omp target update to(buffer[0:nblocks*bsize])
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
@@ -160,7 +160,7 @@ unpack_3double(
 
 #ifdef GPU_PACK
 #pragma omp target update to(buffer[0:3*nblocks*bsize])
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize3; j++)
