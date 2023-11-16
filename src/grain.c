@@ -464,7 +464,9 @@ grainSetup(
     //bp->pre_num_grains = (bp->pre_num_grains > bp->maxTotalGrains)? bp->maxTotalGrains : bp->pre_num_grains ;
 
     xmalloc(grain_cache, grain_t, bp->maxTotalGrains + 1);
+#ifdef GPU_OMP
 #pragma omp target enter data map(to:grain_cache[0:bp->maxTotalGrains + 1])
+#endif
     //xmalloc(bp->grain_cache, grain_t, bp->pre_num_grains +1);
 }
 
@@ -703,6 +705,8 @@ calculateGrainSizes(
     SB_struct * sb,
     size_t * sizes)
 {
+    int *gr = sb->gr;
+
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
@@ -712,9 +716,9 @@ calculateGrainSizes(
         {
             for (int x = 1; x <= dimx; x++)
             {
-                if (sb->gr[SBIDX(x, y, z)] > 0)
+                if (gr[SBIDX(x, y, z)] > 0)
                 {
-                    sizes[sb->gr[SBIDX(x, y, z)]]++;
+                    sizes[gr[SBIDX(x, y, z)]]++;
                 }
             }
         }
@@ -1019,6 +1023,9 @@ cell_nucleation(
     SB_struct * sb,
     void * __attribute__ ((__unused__)) __unused)
 {
+    double *cl = lsp->cl;
+    int *gr = lsp->gr;
+
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
@@ -1083,7 +1090,7 @@ cell_nucleation(
                         initnuc = 0;
                 }
 
-                if ((!sb->mold[idx]) && (sb->gr[idx] <= 0) && lyaerno
+                if ((!sb->mold[idx]) && (gr[idx] <= 0) && lyaerno
                     && initnuc)
                     // Liquid, and a nuc site!
                 {
@@ -1091,7 +1098,7 @@ cell_nucleation(
                     double m_solute0 =
                         m_solute0_a * Ttemp * Ttemp +
                         m_solute0_b * Ttemp + m_solute0_c;
-                    Tunder += m_solute0 * (sb->cl[idx] - bp->Cinit);
+                    Tunder += m_solute0 * (cl[idx] - bp->Cinit);
                     // If this isn't a nucleation site, nuc_threshold will be
                     // INFINITY, so this give us a false positive
                     if (Tunder > nuc_threshold[idx])
@@ -1144,7 +1151,7 @@ cell_nucleation(
             for (int i = 1; i <= dimx; i++)
             {
                 int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
-                if (sb->gr[idx] <= 0)
+                if (gr[idx] <= 0)
                 {
                     int nn = 0;
 #pragma omp atomic capture
@@ -1174,7 +1181,7 @@ cell_nucleation(
         double Tunder = bp->liquidusTemp - Ttemp;
         double m_solute0 =
             m_solute0_a * Ttemp * Ttemp + m_solute0_b * Ttemp + m_solute0_c;
-        Tunder += m_solute0 * (sb->cl[idx] - cinit);
+        Tunder += m_solute0 * (cl[idx] - cinit);
 
         if (Tunder > nuc_threshold[idx])
         {
@@ -1203,8 +1210,6 @@ cell_nucleation(
 #endif
     for (int k = 1; k <= dimz; k++)
     {
-        int *gr = sb->gr;
-        double *cl = sb->cl;
 #ifdef GPU_OMP_NUC
 #pragma omp parallel for collapse(2) schedule(static,1)
 #endif

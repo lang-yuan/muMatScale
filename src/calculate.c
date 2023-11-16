@@ -111,6 +111,9 @@ ExchangeFacesForVar(
     variable_registration *v = &var_regs[variable_key];
     size_t req_len = 2 * NUM_NEIGHBORS;
 
+    double* dbuf;
+    int* ibuf;
+
     if (v->reqs == NULL)
     {
         xrealloc(v->reqs, MPI_Request, req_len);
@@ -136,6 +139,30 @@ ExchangeFacesForVar(
             memset(v->rbuf[face], 1, v->datasize * n2);
             v->sbuf[face] = malloc(v->datasize * n2);
             memset(v->sbuf[face], 1, v->datasize * n2);
+#ifdef GPU_PACK
+switch( v->datasize)
+{
+    case 8:
+        dbuf = (double*)v->rbuf[face];
+#pragma omp target enter data map(to:dbuf[:n2])
+        dbuf = (double*)v->sbuf[face];
+#pragma omp target enter data map(to:dbuf[:n2])
+        break;
+   case 4:
+       ibuf = (int*)v->rbuf[face];
+#pragma omp target enter data map(to:ibuf[:n2])
+       ibuf = (int*)v->sbuf[face];
+#pragma omp target enter data map(to:ibuf[:n2])
+       break;
+   case 24:
+        dbuf = (double*)v->rbuf[face];
+#pragma omp target enter data map(to:dbuf[:3*n2])
+        dbuf = (double*)v->sbuf[face];
+#pragma omp target enter data map(to:dbuf[:3*n2])
+   default:
+       break;
+}
+#endif
         }
     }
 
@@ -207,30 +234,17 @@ doiteration(
     {
         // start communication for cl
         {
-            cl_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(cl_var, lsp->cl);
         }
 
         // start communication for fs
         {
-            fs_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(fs_var, lsp->fs);
         }
 
         // start communication for dc
         {
-            dc_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
             ExchangeFacesForVar(dc_var, lsp->dc);
-        }
-
-        // start communication for d
-        {
-            d_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(d_var, lsp->d);
         }
 
         // Produces:  temperature
@@ -247,25 +261,32 @@ doiteration(
             profile(CALC_NUCLEATION);
         }
         {
+            // update gr on CPU before ops on gr
+            gr_dataexchange_from(lsp, NULL);
+            profile(OFFLOADING_GPU_CPU);
+
             activateNewGrains();
             profile(GRAIN_ACTIVATION);
+            gr_dataexchange_to(lsp, NULL);
+            profile(OFFLOADING_GPU_CPU);
         }
 
-        // start communicating gr
         {
-            //No need to copy back from GPU since gr was just set on CPU
-            //        ExchangeFacesForVar(grain_var);
+            ExchangeFacesForVar(grain_var, lsp->gr);
         }
 
         {
             FinishExchangeForVar(cl_var, lsp->cl);
-            cl_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
         {
             FinishExchangeForVar(fs_var, lsp->fs);
-            fs_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
+        }
+
+        {
+            FinishExchangeForVar(grain_var, lsp->gr);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
         // Uses No Halo: ce
@@ -285,7 +306,6 @@ doiteration(
             profile(CALC_FS_CHANGE);
         }
 
-
         // Uses No Halo: gr, fs, dc
         // Uses w/ Halo:
         // Produces: d, fs
@@ -294,27 +314,20 @@ doiteration(
             profile(CALC_GROW_OCTAHEDRA);
         }
 
-        // finish communications for gr
+        // start communication for d
         {
-
-            gr_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
-            ExchangeFacesForVar(grain_var, lsp->gr);
-            FinishExchangeForVar(grain_var, lsp->gr);
-            gr_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            ExchangeFacesForVar(d_var, lsp->d);
         }
+
         // finish communications for dc
         {
             FinishExchangeForVar(dc_var, lsp->dc);
-            dc_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
         // finish communications for d
         {
             FinishExchangeForVar(d_var, lsp->d);
-            d_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_CPU_GPU);
+            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
 #ifdef INDEX_SEP
@@ -334,7 +347,6 @@ doiteration(
             gsolid_volume += solid_volume;
             timing(COMPUTATION, timer_elapsed());
         }
-
     }
 
     timing(COMPUTATION, timer_elapsed());

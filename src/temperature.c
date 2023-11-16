@@ -215,6 +215,8 @@ tempUpdateSB_int(
     int dimz = bp->gsdimz + 2;
 
     double *temperature = sb->temperature;
+    int* lsindex = sb->lsindex;
+
     uint32_t sbx = sb->coords.x;
     uint32_t sby = sb->coords.y;
     uint32_t sbz = sb->coords.z;
@@ -240,17 +242,17 @@ tempUpdateSB_int(
                     direct_temp_calc(sbx, sby, sbz, x, y, z);
 
                 if ((bp->thermal_ana)
-                    && (sb->temperature[SBIDX(x, y, z)] > bp->liquidusTemp))
-                    sb->lsindex[SBIDX(x, y, z)] = 1;
+                    && (temperature[SBIDX(x, y, z)] > bp->liquidusTemp))
+                    lsindex[SBIDX(x, y, z)] = 1;
             }
         }
     }
 
 #ifdef GPU_OMP
 #ifndef GPU_OMP_NUC
-#pragma omp target update from(sb->temperature[0:totaldim])
+#pragma omp target update from(temperature[0:totaldim])
 #endif
-#pragma omp target update from(sb->lsindex[0:totaldim])
+#pragma omp target update from(lsindex[0:totaldim])
 #endif
 
 }

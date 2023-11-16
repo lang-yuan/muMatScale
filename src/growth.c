@@ -21,45 +21,6 @@
 #include "omp.h"
 #include "xmalloc.h"
 
-void
-fs_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-#pragma omp target update to(lsp->fs[0:lsp->totaldim])  //nowait
-#endif
-}
-
-void
-fs_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-#pragma omp target update from(lsp->fs[0:lsp->totaldim])        //nowait
-#endif
-}
-
-void
-cl_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-#pragma omp target update to(lsp->cl[0:lsp->totaldim])  //nowait
-#endif
-}
-
-void
-cl_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-#pragma omp target update from(lsp->cl[0:lsp->totaldim])        //nowait
-#endif
-}
 
 void
 gr_dataexchange_to(
@@ -67,7 +28,8 @@ gr_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update to(lsp->gr[0:lsp->totaldim])  //nowait
+int* gr = lsp->gr;
+#pragma omp target update to(gr[0:lsp->totaldim])  //nowait
 #endif
 }
 
@@ -77,49 +39,11 @@ gr_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-#pragma omp target update from(lsp->gr[0:lsp->totaldim])        //nowait
+int* gr = lsp->gr;
+#pragma omp target update from(gr[0:lsp->totaldim])        //nowait
 #endif
 }
 
-void
-d_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-#pragma omp target update to(lsp->d[0:lsp->totaldim])   //nowait
-#endif
-}
-
-void
-d_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-#pragma omp target update from(lsp->d[0:lsp->totaldim]) //nowait
-#endif
-}
-
-void
-dc_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-#pragma omp target update to(lsp->dc[0:lsp->totaldim])  //nowait
-#endif
-}
-
-void
-dc_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-#pragma omp target update from(lsp->dc[0:lsp->totaldim])        //nowait
-#endif
-}
 
 /**
  * Calculate the diffusion for each cell in the subblock
@@ -169,6 +93,8 @@ sb_diffuse_alloy_decentered(
 #endif
 
     int8_t *mold = lsp->mold;
+    double* fs = lsp->fs;
+    double* cl = lsp->cl;
 #ifdef GPU_OMP
 #pragma omp target teams distribute
 #endif
@@ -183,8 +109,8 @@ sb_diffuse_alloy_decentered(
             {
                 int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
                 double nbsum = 0;
-                double conc = lsp->cl[idx];
-                double lspfs = lsp->fs[idx];
+                double conc = cl[idx];
+                double lspfs = fs[idx];
 
                 int idxp = idx + 1;
                 int idxm = idx - 1;
@@ -196,34 +122,34 @@ sb_diffuse_alloy_decentered(
                 double fs_av, r;
 
 
-                fs_av = 0.5 * (lspfs + lsp->fs[idxp]);
+                fs_av = 0.5 * (lspfs + fs[idxp]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idxp]);
-                double concxp = lsp->cl[idxp];
+                double concxp = cl[idxp];
                 nbsum += r * (concxp - conc);
 
-                fs_av = 0.5 * (lspfs + lsp->fs[idxm]);
+                fs_av = 0.5 * (lspfs + fs[idxm]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idxm]);
-                double concxm = lsp->cl[idxm];
+                double concxm = cl[idxm];
                 nbsum += r * (concxm - conc);
 
-                fs_av = 0.5 * (lspfs + lsp->fs[idyp]);
+                fs_av = 0.5 * (lspfs + fs[idyp]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idyp]);
-                double concyp = lsp->cl[idyp];
+                double concyp = cl[idyp];
                 nbsum += r * (concyp - conc);
 
-                fs_av = 0.5 * (lspfs + lsp->fs[idym]);
+                fs_av = 0.5 * (lspfs + fs[idym]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idym]);
-                double concym = lsp->cl[idym];
+                double concym = cl[idym];
                 nbsum += r * (concym - conc);
 
-                fs_av = 0.5 * (lspfs + lsp->fs[idzp]);
+                fs_av = 0.5 * (lspfs + fs[idzp]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idzp]);
-                double conczp = lsp->cl[idzp];
+                double conczp = cl[idzp];
                 nbsum += r * (conczp - conc);
 
-                fs_av = 0.5 * (lspfs + lsp->fs[idzm]);
+                fs_av = 0.5 * (lspfs + fs[idzm]);
                 r = (rs * fs_av + rl * (1 - fs_av)) * (1 - mold[idzm]);
-                double conczm = lsp->cl[idzm];
+                double conczm = cl[idzm];
                 nbsum += r * (conczm - conc);
 
 /*
@@ -253,7 +179,7 @@ sb_diffuse_alloy_decentered(
 
                     double vtoce =
                         (cell_u * dcldx + cell_v * dcldy +
-                         cell_w * dcldz) * (1 - lsp->fs[idx]);
+                         cell_w * dcldz) * (1 - fs[idx]);
                     vtoce = vtoce * bp->ts_delt;
 
                     nbsum = nbsum - vtoce;
@@ -265,9 +191,9 @@ sb_diffuse_alloy_decentered(
 	 	int ndx = (k + nn[n][2]) * (dimy+2)*(dimx+2) +
 	 			(j + nn[n][1]) * (dimx+2) +
 	 			(i + nn[n][0]);
-         double fs_av = 0.5 * (lspfs + lsp->fs[ndx]);
+         double fs_av = 0.5 * (lspfs + fs[ndx]);
 		 double r = rs * fs_av + rl * (1 - fs_av);
-		 double nbconc = lsp->cl[ndx];
+		 double nbconc = cl[ndx];
 		 nbsum += r * (nbconc - conc);
 	  }
 */
@@ -297,7 +223,11 @@ pre_cell_reduction(
 
     int8_t *mold = lsp->mold;
     double *ce = lsp->ce;
+    double *fs = lsp->fs;
+    double *cl = lsp->cl;
     int *diff_id = lsp->diff_id;
+    int* gr = lsp->gr;
+
 #if defined(GPU_OMP)
 #pragma omp target map(tofrom:gindex, nindex, fsindex)
 #pragma omp teams distribute
@@ -323,12 +253,12 @@ pre_cell_reduction(
                     continue;
 
 #ifdef SEP_LISTS
-                if (lsp->gr[idx] <= 0)  // liquid cell
+                if (gr[idx] <= 0)  // liquid cell
                 {
-                    lsp->cl[idx] = ce[idx];
+                    cl[idx] = ce[idx];
                     int nbindex =
-                        lsp->gr[idxp] + lsp->gr[idxm] + lsp->gr[idyp] +
-                        lsp->gr[idym] + lsp->gr[idzp] + lsp->gr[idzm];
+                        gr[idxp] + gr[idxm] + gr[idyp] +
+                        gr[idym] + gr[idzp] + gr[idzm];
                     if (nbindex > 0)
                     {
                         int nn = 0;
@@ -343,13 +273,13 @@ pre_cell_reduction(
                     continue;
                 }
 
-                if (lsp->fs[idx] == 1)
+                if (fs[idx] == 1)
                 {
-                    lsp->cl[idx] = ce[idx] * k_inv;
+                    cl[idx] = ce[idx] * k_inv;
                     continue;
                 }
 
-                if (lsp->fs[idx] < 1.0)
+                if (fs[idx] < 1.0)
                 {
 
                     int ff = 0;
@@ -362,19 +292,19 @@ pre_cell_reduction(
 
                 }
 #else // NOT SEP_LISTS
-                if (lsp->fs[idx] >= 1.0)
+                if (fs[idx] >= 1.0)
                 {
-                    lsp->cl[idx] = ce[idx] * k_inv;
+                    cl[idx] = ce[idx] * k_inv;
                     continue;
                 }
 
-                if (lsp->gr[idx] <= 0)  // liquid cell
-                    lsp->cl[idx] = ce[idx];
+                if (gr[idx] <= 0)  // liquid cell
+                    cl[idx] = ce[idx];
 
                 int nbindex =
-                    lsp->gr[idx] + lsp->gr[idxp] + lsp->gr[idxm] +
-                    lsp->gr[idyp] + lsp->gr[idym] + lsp->gr[idzp] +
-                    lsp->gr[idzm];
+                    gr[idx] + gr[idxp] + gr[idxm] +
+                    gr[idyp] + gr[idym] + gr[idzp] +
+                    gr[idzm];
                 if (nbindex > 0)
                 {
                     int nn = 0;
@@ -437,7 +367,12 @@ fs_change_diffuse(
 
     double *oce = lsp->oce;
     double *ce = lsp->ce;
+    double *fs = lsp->fs;
+    double* cl = lsp->cl;
     double *temperature = lsp->temperature;
+    int* ogr = lsp->ogr;
+    int* gr = lsp->gr;
+
 #ifndef FSSEP
 
 #if defined(GPU_OMP)
@@ -457,21 +392,21 @@ fs_change_diffuse(
                 double c_int = cinit + m_inv * (Tcell - Tliq);
                 double Tunder = Tliq - Tcell;
 
-                Tunder += liq_slope * (lsp->cl[idx] - cinit);
+                Tunder += liq_slope * (cl[idx] - cinit);
 
 
-                if (lsp->gr[idx] <= 0 || Tcell < 1.0 || Tcell > Tliq)
+                if (gr[idx] <= 0 || Tcell < 1.0 || Tcell > Tliq)
                 {
-                    lsp->cl[idx] = ce[idx];
-                    lsp->ogr[idx] = 0;
-                    lsp->gr[idx] = 0;
-                    lsp->fs[idx] = 0;
+                    cl[idx] = ce[idx];
+                    ogr[idx] = 0;
+                    gr[idx] = 0;
+                    fs[idx] = 0;
                     continue;
                 }
 
-                if (lsp->fs[idx] == 1.0 && (Tunder >= 0.0))
+                if (fs[idx] == 1.0 && (Tunder >= 0.0))
                 {
-                    lsp->cl[idx] = ce[idx] * k_inv;
+                    cl[idx] = ce[idx] * k_inv;
                     continue;
                 }
 
@@ -489,23 +424,23 @@ fs_change_diffuse(
                 // at neighbors
                 double dce = ce[idx] - oce[idx];
                 double dcl =
-                    (c_int - lsp->cl[idx]) * D_xt * 2 + dce / (1 -
+                    (c_int - cl[idx]) * D_xt * 2 + dce / (1 -
                                                                km *
-                                                               lsp->fs[idx]);
+                                                               fs[idx]);
                 double dfs =
-                    (dcl * (1. - km * lsp->fs[idx]) -
-                     dce) * km_inv / lsp->cl[idx];
-                lsp->cl[idx] += dcl;
-                lsp->fs[idx] += dfs;
-                lsp->fs[idx] = MIN(1.0, lsp->fs[idx]);
+                    (dcl * (1. - km * fs[idx]) -
+                     dce) * km_inv / cl[idx];
+                cl[idx] += dcl;
+                fs[idx] += dfs;
+                fs[idx] = MIN(1.0, fs[idx]);
 
-                if (lsp->fs[idx] < 0.)
+                if (fs[idx] < 0.)
                 {
-                    lsp->fs[idx] = 0.;
-                    lsp->gr[idx] = 0;
-                    lsp->ogr[idx] = 0;
+                    fs[idx] = 0.;
+                    gr[idx] = 0;
+                    ogr[idx] = 0;
                     dfs = 0;
-                    lsp->cl[idx] = ce[idx];
+                    cl[idx] = ce[idx];
                 }
 
             }
@@ -514,7 +449,7 @@ fs_change_diffuse(
 
 #else
 
-    int fsindex = lsp->fsindex;
+    int fsindex = fsindex;
     double *oce = lsp->oce;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
@@ -526,36 +461,36 @@ fs_change_diffuse(
 #else
         int idx = diff_id[i];
 
-        if (lsp->gr[idx] <= 0)
+        if (gr[idx] <= 0)
         {
-            lsp->cl[idx] = ce[idx];
+            cl[idx] = ce[idx];
             continue;
         }
 
-        if (lsp->fs[idx] == 1.0)
+        if (fs[idx] == 1.0)
         {
-            lsp->cl[idx] = ce[idx] * k_inv;
+            cl[idx] = ce[idx] * k_inv;
             continue;
         }
 
 #endif
         double Tcell = temperature[idx];
-        double fs = lsp->fs[idx];
+        double fs = fs[idx];
 
         double c_int = cinit + m_inv * (Tcell - Tliq);
 
         double dce = ce[idx] - oce[idx];
-        double dcl = (c_int - lsp->cl[idx]) * D_xt * 2 + dce / (1 - km * fs);
-        double dfs = (dcl * (1. - km * fs) - dce) * km_inv / lsp->cl[idx];
-        lsp->cl[idx] += dcl;
-        lsp->fs[idx] += dfs;
-        lsp->fs[idx] = MIN(1.0, lsp->fs[idx]);
+        double dcl = (c_int - cl[idx]) * D_xt * 2 + dce / (1 - km * fs);
+        double dfs = (dcl * (1. - km * fs) - dce) * km_inv / cl[idx];
+        cl[idx] += dcl;
+        fs[idx] += dfs;
+        fs[idx] = MIN(1.0, fs[idx]);
 
-        if (lsp->fs[idx] < 0.)
+        if (fs[idx] < 0.)
         {
-            lsp->fs[idx] = 0.;
-            lsp->gr[idx] = 0;
-            lsp->cl[idx] = ce[idx];
+            fs[idx] = 0.;
+            gr[idx] = 0;
+            cl[idx] = ce[idx];
         }
 
     }
@@ -577,6 +512,7 @@ grow_octahedra(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused)
 {
+
     const int dimx = bp->gsdimx;
     const int dimy = bp->gsdimy;
     const int dimz = bp->gsdimz;
@@ -584,6 +520,11 @@ grow_octahedra(
     const double fsgrow = bp->rev_fsgrow;
 
     int totaldim = (dimx + 2) * (dimy + 2) * (dimz + 2);
+
+    double* fs = lsp->fs;
+    double* d = lsp->d;
+    decentered_t* dc = lsp->dc;
+    int *gr = lsp->gr;
 
 #ifndef GROWSEP
 
@@ -601,7 +542,7 @@ grow_octahedra(
             for (int i = 1; i <= dimx; i++)
             {
                 int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
-                int grid = lsp->gr[idx];
+                int grid = gr[idx];
 
                 // if cell part of a grain, grow it
                 if (grid > 0 && grid < bp->maxTotalGrains)
@@ -620,9 +561,9 @@ grow_octahedra(
                     double g12 = grain.rotmat[1][2];
                     double g22 = grain.rotmat[2][2];
 
-                    double rx0 = 0.0 - lsp->dc[idx].x;
-                    double ry0 = 0.0 - lsp->dc[idx].y;
-                    double rz0 = 0.0 - lsp->dc[idx].z;
+                    double rx0 = 0.0 - dc[idx].x;
+                    double ry0 = 0.0 - dc[idx].y;
+                    double rz0 = 0.0 - dc[idx].z;
 
                     double gx0 = g00 * rx0 + g10 * ry0 + g20 * rz0;
                     double gy0 = g01 * rx0 + g11 * ry0 + g21 * rz0;
@@ -631,7 +572,7 @@ grow_octahedra(
                     double ds1 = ABS(gx0) + ABS(gy0) + ABS(gz0);
                     ds1 = MIN(ds1, 1.5);
 
-                    lsp->d[idx] = ds1 + lsp->fs[idx] * fsgrow;
+                    d[idx] = ds1 + fs[idx] * fsgrow;
                 }
             }
         }
@@ -639,8 +580,12 @@ grow_octahedra(
 
 #else // GROWSEP
 
-    int growindex = lsp->growindex;
+    int growindex = growindex;
 
+    double* d = lsp->d;
+    double* fs = lsp->fs;
+    int* gr = lsp->gr;
+    decentered_t* dc = lsp->dc;
 #if defined(GPU_OMP)
 #pragma omp target teams distribute parallel for schedule(static,1)
 #endif
@@ -650,11 +595,10 @@ grow_octahedra(
         int idx = fs_id[i];
 #else
         int idx = diff_id[i];
-        if (lsp->gr[idx] <= 0)
+        if (gr[idx] <= 0)
             continue;
 #endif
-        //int idx = lsp->grow_id[i];
-        int gid = lsp->gr[idx];
+        int gid = gr[idx];
         grain_t grain = grain_cache[gid];
 
         double g00 = grain.rotmat[0][0];
@@ -669,9 +613,9 @@ grow_octahedra(
         double g12 = grain.rotmat[1][2];
         double g22 = grain.rotmat[2][2];
 
-        double rx0 = 0.0 - lsp->dc[idx].x;
-        double ry0 = 0.0 - lsp->dc[idx].y;
-        double rz0 = 0.0 - lsp->dc[idx].z;
+        double rx0 = 0.0 - dc[idx].x;
+        double ry0 = 0.0 - dc[idx].y;
+        double rz0 = 0.0 - dc[idx].z;
 
         double gx0 = g00 * rx0 + g10 * ry0 + g20 * rz0;
         double gy0 = g01 * rx0 + g11 * ry0 + g21 * rz0;
@@ -680,7 +624,7 @@ grow_octahedra(
         double ds1 = ABS(gx0) + ABS(gy0) + ABS(gz0);
         ds1 = MIN(ds1, 1.5);
 
-        lsp->d[idx] = ds1 + lsp->fs[idx] * fsgrow;
+        d[idx] = ds1 + fs[idx] * fsgrow;
     }
 #endif //GROWSEP
 
@@ -690,7 +634,7 @@ grow_octahedra(
 #endif
     for (int i = 0; i < totaldim; i++)
     {
-        ogr[i] = lsp->gr[i];
+        ogr[i] = gr[i];
     }
 
 }
@@ -709,6 +653,7 @@ grow_cell_reduction(
     int8_t *mold = lsp->mold;
     int *diff_id = lsp->diff_id;
     int *nuc_id = lsp->nuc_id;
+    int* gr = lsp->gr;
 #if defined(GPU_OMP)
 #pragma omp target map(tofrom:gindex, nindex)
 #pragma omp teams distribute
@@ -733,11 +678,11 @@ grow_cell_reduction(
                 if (mold[idx])
                     continue;
 
-                if (lsp->gr[idx] <= 0)  // liquid cell
+                if (gr[idx] <= 0)  // liquid cell
                 {
                     int nbindex =
-                        lsp->gr[idxp] + lsp->gr[idxm] + lsp->gr[idyp] +
-                        lsp->gr[idym] + lsp->gr[idzp] + lsp->gr[idzm];
+                        gr[idxp] + gr[idxm] + gr[idyp] +
+                        gr[idym] + gr[idzp] + gr[idzm];
                     if (nbindex > 0)
                     {
                         int nn = 0;
@@ -785,6 +730,10 @@ capture_octahedra_diffuse(
     SB_struct * lsp,
     void *vsolid_volume)
 {
+    double* d = lsp->d;
+    decentered_t* dc = lsp->dc;
+    int *gr = lsp->gr;
+
     double *solid_volume = (double *) vsolid_volume;
     double sum_fs = 0.0;
     uint64_t solid_count = 0;
@@ -804,7 +753,7 @@ capture_octahedra_diffuse(
     int sizedc =
         sizeof(decentered_t) * ((bp->gsdimx + 2) * (bp->gsdimy + 2) *
                                 (bp->gsdimz + 2));
-    memcpy(dc_old, lsp->dc, sizedc);
+    memcpy(dc_old, dc, sizedc);
 #endif
 
     dwrite(DEBUG_TASK_CTRL,
@@ -835,7 +784,8 @@ capture_octahedra_diffuse(
 
     double *ce = lsp->ce;
     int *ogr = lsp->ogr;
-
+    double *cl = lsp->cl;
+    double *fs = lsp->fs;
 #ifdef INDEX_SEP
 
     int gindex = lsp->gindex;
@@ -913,15 +863,15 @@ capture_octahedra_diffuse(
                 g12 = grain.rotmat[1][2];
                 g22 = grain.rotmat[2][2];
 
-                double rx1 = -1.0 * nn[n][0] - lsp->dc[ndx].x;
-                double ry1 = -1.0 * nn[n][1] - lsp->dc[ndx].y;
-                double rz1 = -1.0 * nn[n][2] - lsp->dc[ndx].z;
+                double rx1 = -1.0 * nn[n][0] - dc[ndx].x;
+                double ry1 = -1.0 * nn[n][1] - dc[ndx].y;
+                double rz1 = -1.0 * nn[n][2] - dc[ndx].z;
 
                 dx = g00 * rx1 + g10 * ry1 + g20 * rz1;
                 dy = g01 * rx1 + g11 * ry1 + g21 * rz1;
                 dz = g02 * rx1 + g12 * ry1 + g22 * rz1;
 
-                double dfs = lsp->d[ndx] - (ABS(dx) + ABS(dy) + ABS(dz));
+                double dfs = d[ndx] - (ABS(dx) + ABS(dy) + ABS(dz));
 
 #ifdef RAND_LOCAL
                 dfs += 0.05 * randnum[ndx];
@@ -941,8 +891,8 @@ capture_octahedra_diffuse(
             double ncz = 0.;
             double ncy = 0.;
 
-            double ncd = MIN(lsp->d[ndx], 1.0);
-            double dd = lsp->d[ndx] - ncd;
+            double ncd = MIN(d[ndx], 1.0);
+            double dd = d[ndx] - ncd;
 
             /* determine which corner the new capture cell is close to */
             if (dx + dy >= 0 && dx - dy > 0 && dx + dz > 0 && dx - dz >= 0)
@@ -976,18 +926,18 @@ capture_octahedra_diffuse(
 
             // set dc_tmp based on value of dc at neighboring cell
             dc_tmp[i].x =
-                lsp->dc[ndx].x + nn[found][0] + g00 * ncx + g01 * ncy +
+                dc[ndx].x + nn[found][0] + g00 * ncx + g01 * ncy +
                 g02 * ncz;
             dc_tmp[i].y =
-                lsp->dc[ndx].y + nn[found][1] + g10 * ncx + g11 * ncy +
+                dc[ndx].y + nn[found][1] + g10 * ncx + g11 * ncy +
                 g12 * ncz;
             dc_tmp[i].z =
-                lsp->dc[ndx].z + nn[found][2] + g20 * ncx + g21 * ncy +
+                dc[ndx].z + nn[found][2] + g20 * ncx + g21 * ncy +
                 g22 * ncz;
 
-            lsp->gr[idx] = ogr[ndx];
-            lsp->fs[idx] = 0.;  // Just got captured, set my fraction solid to 0
-            lsp->cl[idx] = ce[idx];
+            gr[idx] = ogr[ndx];
+            fs[idx] = 0.;  // Just got captured, set my fraction solid to 0
+            cl[idx] = ce[idx];
 
         }
     }
@@ -1000,9 +950,9 @@ capture_octahedra_diffuse(
     {
         int idx = diff_id[i];
 
-        lsp->dc[idx].x = dc_tmp[i].x;
-        lsp->dc[idx].y = dc_tmp[i].y;
-        lsp->dc[idx].z = dc_tmp[i].z;
+        dc[idx].x = dc_tmp[i].x;
+        dc[idx].y = dc_tmp[i].y;
+        dc[idx].z = dc_tmp[i].z;
     }
 
 #if defined(GPU_OMP)
@@ -1015,7 +965,7 @@ capture_octahedra_diffuse(
             for (int i = 1; i <= dimx; i++)
             {
                 int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
-                sum_fs += MIN(1.0, lsp->fs[idx]);
+                sum_fs += MIN(1.0, fs[idx]);
             }
         }
     }
@@ -1085,7 +1035,7 @@ capture_octahedra_diffuse(
 
                                 double ds = ABS(dx) + ABS(dy) + ABS(dz);
 
-                                double dfs = lsp->d[ndx] - ds;
+                                double dfs = d[ndx] - ds;
                                 //  dfs += 0.05 * getRandScale();
 
                                 if (dfs > 0)
@@ -1093,9 +1043,9 @@ capture_octahedra_diffuse(
                                     double ncx, ncz, ncy;
                                     capt = 1;
 
-                                    double ncd = MIN(lsp->d[ndx], 1.0);
+                                    double ncd = MIN(d[ndx], 1.0);
 
-                                    double dd = lsp->d[ndx] - ncd;
+                                    double dd = d[ndx] - ncd;
 
                                     /* determine which corner the new capture cell is close to */
                                     if (dx + dy >= 0 && dx - dy > 0
@@ -1152,22 +1102,22 @@ capture_octahedra_diffuse(
                                         ncz = 0.;
                                     }
 
-                                    lsp->gr[idx] = ogr[ndx];
+                                    gr[idx] = ogr[ndx];
 
-                                    lsp->dc[idx].x =
+                                    dc[idx].x =
                                         dc_old[ndx].x + nn[n][0] + g00 * ncx +
                                         g01 * ncy + g02 * ncz;
-                                    lsp->dc[idx].y =
+                                    dc[idx].y =
                                         dc_old[ndx].y + nn[n][1] + g10 * ncx +
                                         g11 * ncy + g12 * ncz;
-                                    lsp->dc[idx].z =
+                                    dc[idx].z =
                                         dc_old[ndx].z + nn[n][2] + g20 * ncx +
                                         g21 * ncy + g22 * ncz;
 
 
                                     dfs = 0;
-                                    lsp->fs[idx] = dfs; // Just got captured, set my fraction solid to 0
-                                    lsp->cl[idx] = ce[idx];
+                                    fs[idx] = dfs; // Just got captured, set my fraction solid to 0
+                                    cl[idx] = ce[idx];
 
                                 }
                             }
@@ -1175,13 +1125,12 @@ capture_octahedra_diffuse(
                     }
                 }
 
-                sum_fs += MIN(1.0, lsp->fs[idx]);
+                sum_fs += MIN(1.0, fs[idx]);
             }
         }
     }
 
 #endif //INDEX_SEP
-
     (*solid_volume) += sum_fs * pow(bp->cellSize, 3.0);
     dwrite(DEBUG_TASK_CTRL, "(sb: %d) Returning %lu solids\n",
            lsp->subblockid, solid_count);

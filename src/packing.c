@@ -9,7 +9,6 @@
 
 #include <stdlib.h>
 
-
 // stride: distance between begining of two blocks of data
 // bsize: number of int/double per block of data
 void
@@ -21,9 +20,16 @@ pack_double(
     const int offset,
     double *buffer)
 {
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for collapse(2)
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
             buffer[i * bsize + j] = data[offset + i * stride + j];
+
+#ifdef GPU_PACK
+#pragma omp target update from(buffer[0:nblocks*bsize])
+#endif
 }
 
 void
@@ -35,9 +41,16 @@ pack_int(
     const int offset,
     int *buffer)
 {
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for collapse(2)
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
             buffer[i * bsize + j] = data[offset + i * stride + j];
+
+#ifdef GPU_PACK
+#pragma omp target update from(buffer[0:nblocks*bsize])
+#endif
 }
 
 void
@@ -52,11 +65,18 @@ pack_3double(
     const int offset3 = 3 * offset;
     const int stride3 = 3 * stride;
     const int bsize3 = 3 * bsize;
+#ifdef GPU_PACK
+#pragma omp target teams distribute parallel for collapse(2)
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize3; j++)
         {
             buffer[i * bsize3 + j] = data[offset3 + i * stride3 + j];
         }
+
+#ifdef GPU_PACK
+#pragma omp target update from(buffer[0:nblocks*bsize3])
+#endif
 }
 
 void
@@ -98,6 +118,10 @@ unpack_double(
     const int offset,
     double *buffer)
 {
+#ifdef GPU_PACK
+#pragma omp target update to(buffer[0:nblocks*bsize])
+#pragma omp target teams distribute parallel for collapse(2)
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
             data[offset + i * stride + j] = buffer[i * bsize + j];
@@ -112,6 +136,10 @@ unpack_int(
     const int offset,
     int *buffer)
 {
+#ifdef GPU_PACK
+#pragma omp target update to(buffer[0:nblocks*bsize])
+#pragma omp target teams distribute parallel for collapse(2)
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
             data[offset + i * stride + j] = buffer[i * bsize + j];
@@ -130,6 +158,10 @@ unpack_3double(
     const int stride3 = 3 * stride;
     const int bsize3 = 3 * bsize;
 
+#ifdef GPU_PACK
+#pragma omp target update to(buffer[0:3*nblocks*bsize])
+#pragma omp target teams distribute parallel for collapse(2)
+#endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize3; j++)
         {
