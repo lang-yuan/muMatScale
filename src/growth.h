@@ -27,34 +27,10 @@ void pre_cell_reduction(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused);
 
-void fs_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
-void fs_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
-void cl_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
-void cl_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
 void gr_dataexchange_to(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused);
 void gr_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
-void d_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
-void d_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
-void dc_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
-void dc_dataexchange_from(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused);
 #endif

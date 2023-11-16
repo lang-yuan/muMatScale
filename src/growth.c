@@ -21,49 +21,6 @@
 #include "omp.h"
 #include "xmalloc.h"
 
-void
-fs_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-//double* fs = lsp->fs;
-//#pragma omp target update to(fs[0:lsp->totaldim])  //nowait
-#endif
-}
-
-void
-fs_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-//double* fs = lsp->fs;
-//#pragma omp target update from(fs[0:lsp->totaldim])        //nowait
-#endif
-}
-
-void
-cl_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-//double* cl = lsp->cl;
-//#pragma omp target update to(cl[0:lsp->totaldim])  //nowait
-#endif
-}
-
-void
-cl_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-//double* cl = lsp->cl;
-//#pragma omp target update from(cl[0:lsp->totaldim])        //nowait
-#endif
-}
 
 void
 gr_dataexchange_to(
@@ -87,49 +44,6 @@ int* gr = lsp->gr;
 #endif
 }
 
-void
-d_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-//double* d = lsp->d;
-//#pragma omp target update to(d[0:lsp->totaldim])   //nowait
-#endif
-}
-
-void
-d_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-//double* d = lsp->d;
-//#pragma omp target update from(d[0:lsp->totaldim]) //nowait
-#endif
-}
-
-void
-dc_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-//decentered_t* dc = lsp->dc;
-//#pragma omp target update to(dc[0:lsp->totaldim])  //nowait
-#endif
-}
-
-void
-dc_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-//decentered_t* dc = lsp->dc;
-//#pragma omp target update from(dc[0:lsp->totaldim])        //nowait
-#endif
-}
 
 /**
  * Calculate the diffusion for each cell in the subblock
