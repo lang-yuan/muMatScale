@@ -159,7 +159,7 @@ sb_diffuse_alloy_decentered(
     }
 
 #ifndef GPU_OMP
-    memcpy(lsp->ogr, gr,
+    memcpy(lsp->ogr, lsp->gr,
            (dimx + 2) * (dimy + 2) * (dimz + 2) * sizeof(int));
 #endif
 

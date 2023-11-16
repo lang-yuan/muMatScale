@@ -464,7 +464,9 @@ grainSetup(
     //bp->pre_num_grains = (bp->pre_num_grains > bp->maxTotalGrains)? bp->maxTotalGrains : bp->pre_num_grains ;
 
     xmalloc(grain_cache, grain_t, bp->maxTotalGrains + 1);
+#ifdef GPU_OMP
 #pragma omp target enter data map(to:grain_cache[0:bp->maxTotalGrains + 1])
+#endif
     //xmalloc(bp->grain_cache, grain_t, bp->pre_num_grains +1);
 }
 
