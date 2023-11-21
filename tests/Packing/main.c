@@ -4,6 +4,7 @@
 #include "packing.h"
 #include "distribute.h"
 #include "functions.h"
+#include "profiler.h"
 
 #include <math.h>
 
@@ -151,6 +152,8 @@ main(
     int dim3 = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
     if (iproc == 0)
         printf("Local array size = %d\n", dim3);
+
+    profiler_init();
 
     MPI_Barrier(MPI_COMM_WORLD);
 

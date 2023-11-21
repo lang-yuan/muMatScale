@@ -260,12 +260,10 @@ doiteration(
         {
             // update gr on CPU before ops on gr
             gr_dataexchange_from(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
 
             activateNewGrains();
             profile(GRAIN_ACTIVATION);
             gr_dataexchange_to(lsp, NULL);
-            profile(OFFLOADING_GPU_CPU);
         }
 
         {

@@ -6,6 +6,8 @@ add_executable(testPacking ${CMAKE_SOURCE_DIR}/tests/Packing/main.c
                ${CMAKE_SOURCE_DIR}/src/globals.c
                ${CMAKE_SOURCE_DIR}/tests/Packing/functions.c
                ${CMAKE_SOURCE_DIR}/tests/Packing/read_ctrl.c
+               ${CMAKE_SOURCE_DIR}/src/profiler.c
+               ${CMAKE_SOURCE_DIR}/src/stopwatch.c
                ${CMAKE_SOURCE_DIR}/src/packing.c)
 target_link_libraries(testPacking PRIVATE m)
 if(${BUILD_FOR_GPU})
