@@ -53,9 +53,6 @@ CopyMSBtoSB(
     MSB_struct * m,
     SB_struct * s)
 {
-    s->procid = m->procid;
-    s->subblockid = m->subblockid;
-    s->coords = m->coords;
     s->nnuc = m->nnuc;
     memcpy(s->neighbors, m->neighbors,
            NUM_NEIGHBORS * NBOR_INFO * sizeof(int));

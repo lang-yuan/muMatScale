@@ -28,15 +28,29 @@
 
 extern SB_struct *lsp;
 
-#define get_msubblock_path(sb, var) get_subblock_path((SB_struct*)(sb), (var))
+static const char *
+get_msubblock_path(
+    int itask,
+    const char *var)
+{
+    static char path[PATH_MAX] = { 0 };
+    int coords[3];
+    MPI_Cart_coords(mpi_comm_new, itask, nproc, coords);
+    snprintf(path, PATH_MAX - 1, "/SubBlock_%dx%dx%d/%s",
+             coords[2], coords[1], coords[0], var);
+    return path;
+}
+
 static const char *
 get_subblock_path(
     SB_struct * sb,
     const char *var)
 {
     static char path[PATH_MAX] = { 0 };
+    int coords[3];
+    MPI_Cart_coords(mpi_comm_new, iproc, nproc, coords);
     snprintf(path, PATH_MAX - 1, "/SubBlock_%dx%dx%d/%s",
-             sb->coords.x, sb->coords.y, sb->coords.z, var);
+             coords[2], coords[1], coords[0], var);
     return path;
 }
 
@@ -138,11 +152,13 @@ writeXDMFGrids(
     uint32_t num_sb = bp->gnsbx * bp->gnsby * bp->gnsbz;
     for (uint32_t i = 0; i < num_sb; i++)
     {
-        MSB_struct *sb = &gmsp[i];
+        int coords[3];
+        MPI_Cart_coords(mpi_comm_new, i, num_sb, coords);
+
         fprintf(fp, "%s\t<Grid Name=\"SubBlock %dx%dx%d (%d)\" "
                 "GridType=\"Uniform\">\n",
                 indent,
-                sb->coords.x, sb->coords.y, sb->coords.z, sb->subblockid);
+                coords[2], coords[1], coords[0], i);
         fprintf(fp, "%s\t\t<Topology TopologyType=\"3DCoRectMesh\" "
                 "Dimensions=\"%u %u %u\" />\n",
                 // We do a +1 because we're going to be Cell data
@@ -153,8 +169,7 @@ writeXDMFGrids(
                 indent);
         // Origin
         double rx, ry, rz, ux, uy, uz;
-        SB_struct *sbs = (SB_struct *) sb;
-        getSBRealBounds(sbs->coords.x, sbs->coords.y, sbs->coords.z, &rx, &ry,
+        getSBRealBounds(coords[2], coords[1], coords[0], &rx, &ry,
                         &rz, &ux, &uy, &uz);
         fprintf(fp, "%s\t\t\t\t%e %e %e\n", indent, rz, ry, rx);
         fprintf(fp, "%s\t\t\t</DataItem>\n", indent);
@@ -176,8 +191,8 @@ writeXDMFGrids(
                 "%s\t\t\t<DataItem Format=\"HDF\" NumberType=\"Float\" Precision=\"%lu\" Dimensions=\"%u %u %u\">\n",
                 indent, sizeof(double), bp->gsdimz, bp->gsdimy, bp->gsdimx);
         fprintf(fp, "%s\t\t\t\tSERIAL:%s:%s\n", indent,
-                get_local_rank_file(sb->procid, timestamp),
-                get_msubblock_path(sb, "Temperature"));
+                get_local_rank_file(i, timestamp),
+                get_msubblock_path(i, "Temperature"));
         fprintf(fp, "%s\t\t\t</DataItem>\n", indent);
         fprintf(fp, "%s\t\t</Attribute>\n", indent);
 
@@ -194,8 +209,8 @@ writeXDMFGrids(
                     indent, sizeof(double), bp->gsdimz, bp->gsdimy,
                     bp->gsdimx);
             fprintf(fp, "%s\t\t\t\tSERIAL:%s:%s\n", indent,
-                    get_local_rank_file(sb->procid, timestamp),
-                    get_msubblock_path(sb, "CE"));
+                    get_local_rank_file(i, timestamp),
+                    get_msubblock_path(i, "CE"));
             fprintf(fp, "%s\t\t\t</DataItem>\n", indent);
             fprintf(fp, "%s\t\t</Attribute>\n", indent);
         }
@@ -220,8 +235,8 @@ writeXDMFGrids(
                 "%s\t\t\t\t<DataItem Format=\"HDF\" NumberType=\"UInt\" Dimensions=\"%u %u %u\">\n",
                 indent, bp->gsdimz, bp->gsdimy, bp->gsdimx);
         fprintf(fp, "%s\t\t\t\t\tSERIAL:%s:%s\n", indent,
-                get_local_rank_file(sb->procid, timestamp),
-                get_msubblock_path(sb, "Grain"));
+                get_local_rank_file(i, timestamp),
+                get_msubblock_path(i, "Grain"));
         fprintf(fp, "%s\t\t\t\t</DataItem>\n", indent);
         if (bp->randomize_grains)
             fprintf(fp, "%s\t\t\t</DataItem>\n", indent);
@@ -238,8 +253,8 @@ writeXDMFGrids(
                 "%s\t\t\t\t<DataItem Format=\"HDF\" NumberType=\"UInt\" Dimensions=\"%u %u %u\">\n",
                 indent, bp->gsdimz, bp->gsdimy, bp->gsdimx);
         fprintf(fp, "%s\t\t\t\t\tSERIAL:%s:%s\n", indent,
-                get_local_rank_file(sb->procid, timestamp),
-                get_msubblock_path(sb, "Grain"));
+                get_local_rank_file(i, timestamp),
+                get_msubblock_path(i, "Grain"));
         fprintf(fp, "%s\t\t\t\t</DataItem>\n", indent);
         fprintf(fp,
                 "%s\t\t\t\t<DataItem Reference=\"XML\" Dimensions=\"%u %u %u\">\n",
@@ -274,8 +289,8 @@ writeXDMFGrids(
                 "%s\t\t\t<DataItem Format=\"HDF\" NumberType=\"Float\" Precision=\"%lu\" Dimensions=\"%u %u %u\">\n",
                 indent, sizeof(double), bp->gsdimz, bp->gsdimy, bp->gsdimx);
         fprintf(fp, "%s\t\t\t\tSERIAL:%s:%s\n", indent,
-                get_local_rank_file(sb->procid, timestamp),
-                get_msubblock_path(sb, "FracSolid"));
+                get_local_rank_file(i, timestamp),
+                get_msubblock_path(i, "FracSolid"));
         fprintf(fp, "%s\t\t\t</DataItem>\n", indent);
         fprintf(fp, "%s\t\t</Attribute>\n", indent);
 
@@ -526,7 +541,6 @@ void
 xdmf_writeMain(
     void)
 {
-    // Verify that we're on processor 0.  We assume the gmsp is available.
     assert(iproc == 0);
 
     // Create the XML (XMDF) file

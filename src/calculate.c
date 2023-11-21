@@ -171,14 +171,11 @@ switch( v->datasize)
     // Post Receives & Sends
     {
         SB_struct *s = lsp;
-        dwrite(DEBUG_TASK_CTRL, "Updating variable for block %d\n",
-               s->subblockid);
+        dwrite(DEBUG_TASK_CTRL, "Updating variable for MPI task %d\n",
+               iproc);
 
         timing(COMPUTATION, timer_elapsed());
 
-        /* We pass subblock_num, rather than subblockid, as that number is much
-         * less.  On some systems, there is a limited number of tags available.
-         */
         v->nreq = SendRecvHalosNB(d, variable_key, v->datasize,
                                   s->neighbors, v->sbuf, v->rbuf,
                                   &v->reqs[0]);

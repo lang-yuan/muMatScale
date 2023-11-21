@@ -141,7 +141,6 @@ main(
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     MPI_Comm_rank(MPI_COMM_WORLD, &iproc);
-    fprintf(stderr, "Communicator: iproc=%d, nproc=%d \n", iproc, nproc);
 
     if (iproc == 0)
         printf("Start the program... \n");
@@ -196,6 +195,7 @@ main(
     /* Send configuration parameters to the tasks */
     MPI_Bcast(bp, sizeof(BB_struct), MPI_BYTE, 0, MPI_COMM_WORLD);
 
+    //For MPI_Cart_create, the last dimension is the fast growing one
     int dims[3] = { bp->gnsbz, bp->gnsby, bp->gnsbx };
     int periods[3] = { 1, 1, 1 };
     MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, 0, &mpi_comm_new);
@@ -205,10 +205,11 @@ main(
     MPI_Comm_rank(mpi_comm_new, &iproc);
 
     //MPI_Cart_coords not used for now (not compatible with other parts of code)
-    //int coords[3];
-    //MPI_Cart_coords(mpi_comm_new, iproc, nproc, coords);
-    //printf("My MPI rank is %d, MPI coords are %d,%d,%d \n",
-    //       iproc, coords[2], coords[1], coords[0]);
+    int coords[3];
+    MPI_Cart_coords(mpi_comm_new, iproc, nproc, coords);
+    if(nproc<20)
+        printf("My MPI rank is %d, MPI coords are %d,%d,%d \n",
+               iproc, coords[2], coords[1], coords[0]);
 
     // Set our random seed
     srand(iproc + 1 + bp->base_random_seed);
@@ -221,7 +222,7 @@ main(
     if (iproc == 0)
     {
         gsubblock_list = ll_init(NULL, NULL);
-        init_gmsp(restart);
+        init_gmsp();
     }
 
     if (restart)
@@ -246,8 +247,6 @@ main(
     MPI_Barrier(MPI_COMM_WORLD);
     if (iproc == 0)
     {
-        computeSubblocks();
-
         sendSubblockInfo();
     }
     recvSubblockInfo();
@@ -256,10 +255,11 @@ main(
         completeSendSubblockInfo();
 
     MPI_Barrier(MPI_COMM_WORLD);
-    //printf("proc: %d -> %d,%d,%d\n",iproc,lsp->coords,lsp->coords.y, lsp->coords.z);
-    //lsp->coords.x = coords[2];
-    //lsp->coords.y = coords[1];
-    //lsp->coords.z = coords[0];
+    lsp->coords.x = coords[2];
+    lsp->coords.y = coords[1];
+    lsp->coords.z = coords[0];
+    lsp->subblockid = iproc;
+    //printf("proc: %d -> %d,%d,%d\n",iproc,lsp->coords.x,lsp->coords.y, lsp->coords.z);
 
     // Figure out who my neighbors are for halos exchange
     int neighbors[NUM_NEIGHBORS];

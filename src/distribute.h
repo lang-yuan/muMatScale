@@ -29,8 +29,6 @@ typedef struct tasks_s
 void outputvis(
     );
 void init_gmsp(
-    uint64_t);
-void computeSubblocks(
     );
 void sendSubblockInfo(
     );
