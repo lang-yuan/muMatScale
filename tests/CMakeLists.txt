@@ -36,3 +36,10 @@ add_test(NAME MultiGrains
          ${CMAKE_CURRENT_BINARY_DIR}/../muMatScale
          ${CMAKE_CURRENT_SOURCE_DIR}/ca6mpi.in
          )
+
+add_test(NAME AMtrack
+         COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/testAMtrack.py
+         ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 6 ${MPIEXEC_PREFLAGS}
+         ${CMAKE_CURRENT_BINARY_DIR}/../muMatScale
+         ${CMAKE_CURRENT_SOURCE_DIR}/am_singletrack.in
+         )
