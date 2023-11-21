@@ -277,8 +277,6 @@ restoreSubblock(
 
     H5Tinsert(memtype, "subblockid",
               HOFFSET(taskSubblock, subblockid), H5T_NATIVE_INT);
-    H5Tinsert(memtype, "procid",
-              HOFFSET(taskSubblock, procid), H5T_NATIVE_INT);
 
     H5Tinsert(memtype, "neighbor", HOFFSET(taskSubblock, neighbors),
               memNeiBor);
@@ -348,7 +346,6 @@ restoreSubblock(
 
     //Copy the staticSub in the dataset to the new subblock "sb"
     sb->last_active_ts = staticSub.last_active_ts;
-    sb->procid = staticSub.procid;
     sb->subblockid = staticSub.subblockid;
     sb->nnuc = staticSub.nnuc;
     sb->mold_size = staticSub.mold_size;
@@ -541,7 +538,6 @@ mainAddSubblock(
     memtype = H5Tcreate(H5T_COMPOUND, sizeof(MSB_struct));
     H5Tinsert(memtype, "subblockid",
               HOFFSET(MSB_struct, subblockid), H5T_NATIVE_INT);
-    H5Tinsert(memtype, "procid", HOFFSET(MSB_struct, procid), H5T_NATIVE_INT);
     H5Tinsert(memtype, "activate_ts",
               HOFFSET(MSB_struct, activate_ts), H5T_NATIVE_UINT64);
 
@@ -817,7 +813,7 @@ mainAddSubblockMapping(
             if (neighbors[i] >= 0)
             {
                 MSB_struct *neighbor = &gmsp[neighbors[i]];
-                msb->neighbors[i][0] = neighbor->procid;
+                msb->neighbors[i][0] = neighbor->subblockid;
                 dwrite(DEBUG_MAIN_CTRL,
                        "sb %3d Setting neighbor[%d][0,1] = %3d, %3d\n",
                        msb->subblockid, i,
@@ -1050,8 +1046,6 @@ writeTaskCheckpoint(
 
     H5Tinsert(memtype, "subblockid",
               HOFFSET(taskSubblock, subblockid), H5T_NATIVE_INT);
-    H5Tinsert(memtype, "procid",
-              HOFFSET(taskSubblock, procid), H5T_NATIVE_INT);
 
     H5Tinsert(memtype, "neighbor", HOFFSET(taskSubblock, neighbors),
               memNeiBor);
@@ -1141,7 +1135,6 @@ writeTaskCheckpoint(
         //Collect all values of small variable into one compound variable
         cpSubblock.last_active_ts = sb->last_active_ts;
         cpSubblock.subblockid = sb->subblockid;
-        cpSubblock.procid = sb->procid;
         cpSubblock.coords.x = sb->coords.x;
         cpSubblock.coords.y = sb->coords.y;
         cpSubblock.coords.z = sb->coords.z;
@@ -1319,7 +1312,6 @@ writeMainCheckpoint(
     memtype = H5Tcreate(H5T_COMPOUND, sizeof(MSB_struct));
     H5Tinsert(memtype, "subblockid",
               HOFFSET(MSB_struct, subblockid), H5T_NATIVE_INT);
-    H5Tinsert(memtype, "procid", HOFFSET(MSB_struct, procid), H5T_NATIVE_INT);
     H5Tinsert(memtype, "activate_ts",
               HOFFSET(MSB_struct, activate_ts), H5T_NATIVE_UINT64);
 

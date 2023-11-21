@@ -39,7 +39,7 @@ int nrequests;
 // Initialize the subblock array
 void
 init_gmsp(
-    uint64_t restart)
+    )
 {
     size_t gnsb = bp->gnsbx * bp->gnsby * bp->gnsbz;
 
@@ -47,60 +47,16 @@ init_gmsp(
     printf("Initializing %lu Subblocks...\n", gnsb);
     xmalloc(gmsp, MSB_struct, gnsb);
 
-    if (!restart)
+    for (int id = 0; id < (bp->gnsbx * bp->gnsby * bp->gnsbz); id++)
     {
-        for (size_t k = 0; k < bp->gnsbz; k++)
-        {
-            for (size_t j = 0; j < bp->gnsby; j++)
-            {
-                for (size_t i = 0; i < bp->gnsbx; i++)
-                {
-                    size_t id = i + j * bp->gnsbx + k * bp->gnsbx * bp->gnsby;
-                    gmsp[id].subblockid = id;
-                    gmsp[id].coords.x = i;
-                    gmsp[id].coords.y = j;
-                    gmsp[id].coords.z = k;
-                    gmsp[id].nnuc = 0;
-                    //printf("===%d,%d,%d,%d\n",id,i,j,k);
-                }
-            }
-        }
-
-        for (int id = 0; id < (bp->gnsbx * bp->gnsby * bp->gnsbz); id++)
-            ll_append(gsubblock_list, &gmsp[id]);
-        dwrite(DEBUG_MAIN_CTRL,
-               "%d: Activated cells on bottom of %d x %d x %d grid\n",
-               iproc, bp->gdimx, bp->gdimy, bp->gdimz);
-    }
-}
-
-
-void
-computeSubblocks(
-    )
-{
-    int rank;
-    MPI_Comm_rank(mpi_comm_new, &rank);
-
-    int to_assign = ll_count(gsubblock_list);
-    dprintf("Assigning %d subblocks\n", to_assign);
-
-    lli_t *llp = gsubblock_list->head;
-    for (int i = 0; i < to_assign; i++)
-    {
-        int target = i;
-        MSB_struct *msb = (MSB_struct *) llp->data;
-
-        // Update MSB struct
-        msb->procid = target;
-
-        printf("Assigning sb %d to rank %d\n", msb->subblockid, target);
-
-        llp = llp->next;
+        gmsp[id].subblockid = id;
+        gmsp[id].nnuc = 0;
     }
 
-    timing(COMPUTATION, timer_elapsed());
+    for (int id = 0; id < (bp->gnsbx * bp->gnsby * bp->gnsbz); id++)
+        ll_append(gsubblock_list, &gmsp[id]);
 }
+
 
 void
 sendSubblockInfo(
@@ -118,17 +74,15 @@ sendSubblockInfo(
     {
         MSB_struct *msb = (MSB_struct *) llp->data;
 
-        dwrite(DEBUG_MAIN_CTRL, "Sending SB %d to %d\n", msb->subblockid,
-               msb->procid);
         timing(COMPUTATION, timer_elapsed());
 
-        MPI_Isend(msb, sizeof(MSB_struct), MPI_BYTE, msb->procid, SYNCTAG,
+        MPI_Isend(msb, sizeof(MSB_struct), MPI_BYTE, msb->subblockid, SYNCTAG,
                   mpi_comm_new, request + nrequests);
         nrequests++;
         if (msb->nnuc)
         {
             MPI_Isend(msb->nuc_pt, sizeof(nucleation_t) * msb->nnuc, MPI_BYTE,
-                      msb->procid, SYNCTAG, mpi_comm_new,
+                      msb->subblockid, SYNCTAG, mpi_comm_new,
                       request + nrequests);
             nrequests++;
         }

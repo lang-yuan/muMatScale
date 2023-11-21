@@ -171,7 +171,6 @@ typedef enum
 	neighbors_t neighbors;   \
     loc_t coords;            \
     int subblockid;          \
-    int procid;              \
 	int nnuc;				 \
 	nucleation_t *nuc_pt
 
