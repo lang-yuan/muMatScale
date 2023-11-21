@@ -1,0 +1,104 @@
+BaseFileName  p138v400			/* Identify cases*/
+
+
+NSubblocks 3 2 1            		/* NO. of sub-blocks in x,y,z: int int int  */
+NCellsPerSB 100 200 100         		/* NO of Cells in each subblock: int int int   */
+FaceCtrl  1 1  1  1  1 1      		/* 0 = wrap or 1 = pad each face */
+
+CellSize 5.0e-07          		/* Grid size in Meters */
+FSGrow 0.66              		/*Fraction Solid which allows growth to next cell*/
+
+TimeStep   1.0e-06        		/* Timestep (sec) float */
+RandSeedVal  3823798712               	/* Random Seed Val for srand48 */
+
+# Fluid Flow Options
+FluidFlowMode 0                         /*fluid flow model activation*/
+FluidFlowTimeStep 5.0e-6                /*sub timestep for ff*/
+FFStartTime  0.0                        /*time to start the ff calculation*/
+FFStepGap 1000                          /*Jump of ff calculation*/
+
+# Laser Thermal Analytical Solution
+AnalyticalThermal	1
+LaserPower 			137.9
+LaserSpeed			0.4
+LaserSpotSize		130e-6
+LaserAbsorption		0.35
+LaserHatchSpacing	50e-6
+LaserStartLocation  0 1e-4 5e-5
+NoOfLayers			1
+SubInitialTemp		25		/* C */
+ThermalConductivity 40		/* W/m/c */
+SpecificHeat		600		/* kg/m3 */
+
+TipCurvature 0  /* NO: 0; Yes: 1*/
+GibbsThomsonCoef 2.36e-7   
+# Termination Conditions
+
+FinishTime 6e-4       			/* Auto-calc finish time (float) [Optional] */
+FsFinish  1.1    			/* Auto-calc finish Solid Fraction (float) [Optional] */
+
+
+# Materials Properites
+LiquidusTemp  1350			/* Liquidus temperature, K */
+SolidusTemp   1290			/* Solidus temperature,  K */
+
+#T_pure	1417.8				/* Pure solent temperature,  K */	
+Cinit  4.85				/* Initial solute concentration,  wt% */
+m_solute0 0 0 -10.9				/* Liquidus slope (a, b, c), K/wt%  m = a*T*T+b*T+c */		
+part_coef0 0 0 0.67				/* Partition Coef. (a, b ,c) k = a*T*T + b*T +c */
+Dsol  3.0e-12				/* Diffusion Coef. in solid*/
+Dliq  3.0e-9				/* Diffusion Coef. in liquid*/
+
+# Materials Properites for Fluid Flow
+Density 8.44e+3                          /* density [Kg/m^3] */
+Viscosity 5.0e-3                        /* Liquid viscosity [kg/m/s]*/
+ThermExpCoe 0                           /*thermal expension Coe.  6e-5*/
+SoluteExpCoe  0.5                       /*solute expension Coe.*/
+ReferenceTemp 300
+ReferSolute 4.85
+Gravity_x  0                            /*Gravity at x y z directions*/
+Gravity_y  0
+Gravity_z  0
+InitialVelocity 0.0 0 0
+
+
+# Temperature Settings
+
+InitialTemperature 1609			/* Initial Temperature for Internal T*/
+Gradient   10000       			/* Temperature gradient, K/m */
+Grad_Coef  0         			/* Vary G with time.. ... LY*/
+Velocity   5.0e-5    			/* Casting speed, m/s */
+Velo_Coef  0         			/* Vary V with time.. */
+
+GradSlope     0.0       			/* deviation of right side from horizontal interface*/
+Slope_Coef    0       			/* moving speed of the gradient direction, degree/s */
+Iso_Coef_One  0    			/* curve */
+Iso_Coef_Two  0    			/* curve */
+Coef_Iso2     0    			/* time dependent coef.*/
+
+CoolingRate   0.1            /*cooling rate for isothermal conditon, only work if Gradient == 0*/
+
+# Output
+ScreenPFreq 10				/* Frequency to write output to screen */
+DataFormat XDMF     			/* Output data format: NONE XDMF*/
+DataWriteFreq 200			/* Frequency to write output to files */
+#DataWriteStart 100			/* Steps start to write file */
+checkpointfreq 1000000			/* check point for restart */
+
+
+# Nucleation Sites and control
+MaxGrainDensity 4e+12			/* max. grain density per [m^3]*/
+GNGaussCentre  10			/* centre of gaussian [K] or bottom */
+GNGaussSigma  0.0				/* variation in gaussian [K] or width */
+
+MaxGrainDensitySurf  2e+10 		/* max. grain density per [m^3]*/
+GNGaussCentreSurf  200 			/* centre of gaussian [K] or bottom */
+GNGaussSigmaSurf   0.5  		/* variation in gaussian [K] or width */
+
+MaxTotGrains 1000000			/* max number of grains in total (array size) */
+
+RandomizeGrains 1
+GNOriented 1
+
+#FixedNuc 1.5e-4 1.5e-4 1.5e-4 0 0 0 0			/* Coordinates(3), Angles(3), Threshold(1)*/
+
