@@ -36,8 +36,8 @@ typedef enum
     OFFLOADING_GPU_CPU,
     TIMER_1,
     TIMER_2,
-    TIMER_3,
-    TIMER_4,
+    UNPACKING,
+    PACKING,
     INITIALIZATION,             //[1] Application initialization time
     COMPUTATION,                //[2] Total computation time (CPU)
     COMMUNICATION,              //[3] Total remote communication time (MPI remote)
