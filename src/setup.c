@@ -58,10 +58,6 @@ SetupInitialConditions(
     // Initialize the grains to 0 and fraction solid to 0
     for (int i = 0; i < full_volume; i++)
     {
-        lsp->gr[i] = 0;
-        lsp->ogr[i] = 0;
-        lsp->fs[i] = 0;
-        lsp->d[i] = 0;
         lsp->nuc_threshold[i] = INFINITY;
         lsp->lsindex[i] = 1;
 
@@ -96,8 +92,17 @@ SetupInitialConditions(
            lsp->subblockid, low_x, high_x, low_y, high_y, low_z, high_z);
 
     init_sb_nucleation(lsp);
+}
 
-    // Calculate the number of cells that are mold
+// Calculate the number of cells that are mold
+static void
+countMold(
+    SB_struct * lsp)
+{
+    int dimx = bp->gsdimx;
+    int dimy = bp->gsdimy;
+    int dimz = bp->gsdimz;
+
     for (int z = 1; z <= dimz; z++)
         for (int y = 1; y <= dimy; y++)
             for (int x = 1; x <= dimx; x++)
@@ -105,13 +110,13 @@ SetupInitialConditions(
                     lsp->mold_size++;
 }
 
-
 void
 allocateFields(
     )
 {
     allocate_byte(&lsp->mold);
     allocate_float(&(lsp->fs));
+    allocate_float(&(lsp->temperature));
 
     xmalloc(lsp->nuc_threshold, float,
               (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2));
@@ -149,26 +154,39 @@ allocateFields(
 
     allocate_int(&(lsp->lsindex));
 
-    SetupInitialConditions(lsp);
-    dprintf(stderr, "complete initial Rank %d \n", iproc);
-
-#ifdef GPU_OMP
     int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
 
-    double* cl = lsp->cl;
-#pragma omp target enter data map(to:cl[0:totaldim]) nowait
+    memset(lsp->cl, 0, totaldim*sizeof(double));
+    memset(lsp->d, 0, totaldim*sizeof(double));
+    memset(lsp->ogr, 0, totaldim*sizeof(int));
+
+#ifdef GPU_OMP
+
+#pragma omp target enter data map(to:bp[0:1])
+
     double* d = lsp->d;
 #pragma omp target enter data map(to:d[0:totaldim]) nowait
     double* fs = lsp->fs;
 #pragma omp target enter data map(to:fs[0:totaldim]) nowait
-    decentered_t* dc = lsp->dc;
-#pragma omp target enter data map(to:dc[0:totaldim]) nowait
     int* gr = lsp->gr;
 #pragma omp target enter data map(to:gr[0:totaldim]) nowait
+    int *ogr = lsp->ogr;
+#pragma omp target enter data map(to:ogr[0:totaldim]) nowait
+    double *temperature = lsp->temperature;
+#pragma omp target enter data map(to:temperature[0:totaldim])
     int* lsindex = lsp->lsindex;
 #pragma omp target enter data map(to:lsindex[0:totaldim])
 
-#pragma omp target enter data map(to:bp[0:1]) nowait
+#endif
+
+    SetupInitialConditions(lsp);
+    dprintf(stderr, "complete initial Rank %d \n", iproc);
+
+#ifdef GPU_OMP
+    double* cl = lsp->cl;
+#pragma omp target enter data map(to:cl[0:totaldim]) nowait
+    decentered_t* dc = lsp->dc;
+#pragma omp target enter data map(to:dc[0:totaldim]) nowait
 
 #ifdef GPU_OMP_NUC
     float *nuc_threshold = lsp->nuc_threshold;
@@ -189,12 +207,10 @@ allocateFields(
 #pragma omp target enter data map(to:oce[0:totaldim]) nowait
     double *ce = lsp->ce;
 #pragma omp target enter data map(to:ce[0:totaldim]) nowait
-    int *ogr = lsp->ogr;
-#pragma omp target enter data map(to:ogr[0:totaldim]) nowait
-    double *temperature = lsp->temperature;
-#pragma omp target enter data map(to:temperature[0:totaldim])
 
 #endif
+
+    countMold(lsp);
 
     dwrite(DEBUG_TASK_CTRL,
            "%d: Allocated memory for 1 subblocks of size %d x %d x %d\n",

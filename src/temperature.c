@@ -5,12 +5,13 @@
 /* See the top-level LICENSE file for details.                 */
 /***************************************************************/
 
-#include <math.h>
 #include "ll.h"
-#include "xmalloc.h"
 #include "globals.h"
 #include "functions.h"
 #include "temperature.h"
+
+#include <math.h>
+#include <assert.h>
 
 extern SB_struct *lsp;
 
@@ -160,29 +161,39 @@ tempPrepareSB_int(
 
     int totaldim = dimx * dimy * dimz;
 
-    xmalloc(sb->temperature, double,
-            totaldim);
+    double* temperature = sb->temperature;
+    int* lsindex = sb->lsindex;
+    uint32_t sbx = sb->coords.x;
+    uint32_t sby = sb->coords.y;
+    uint32_t sbz = sb->coords.z;
 
+#ifdef GPU_OMP
+#pragma omp target teams distribute parallel for collapse(3) schedule(static,1)
+#endif
     for (size_t z = 0; z < dimz; z++)
     {
         for (size_t y = 0; y < dimy; y++)
         {
             for (size_t x = 0; x < dimx; x++)
             {
-                sb->temperature[SBIDX(x, y, z)] =
-                    direct_temp_calc(sb->coords.x, sb->coords.y, sb->coords.z,
-                                     x, y, z);
+                temperature[SBIDX(x, y, z)] =
+                    direct_temp_calc(sbx, sby, sbz, x, y, z);
 
                 if (bp->am)
                 {
-                    if (sb->temperature[SBIDX(x, y, z)] >= bp->liquidusTemp)
-                        sb->lsindex[SBIDX(x, y, z)] = 1;
+                    if (temperature[SBIDX(x, y, z)] >= bp->liquidusTemp)
+                        lsindex[SBIDX(x, y, z)] = 1;
                     else
-                        sb->lsindex[SBIDX(x, y, z)] = 0;
+                        lsindex[SBIDX(x, y, z)] = 0;
                 }
             }
         }
     }
+
+#ifdef GPU_OMP
+#pragma omp target update from(temperature[0:totaldim])
+#pragma omp target update from(lsindex[0:totaldim])
+#endif
 
     /* Set up the mold in the borderlands */
     if (sb->neighbors[FACE_TOP][0] == -1)
