@@ -349,6 +349,13 @@ createGrains(
     size_t count,
     size_t base_gr_num)
 {
+#ifdef GPU_OMP
+    // copy gr to CPU since grains are created there
+    int* gr = lsp->gr;
+#pragma omp target update from(gr[0:lsp->totaldim])
+    profile(OFFLOADING_GPU_CPU);
+#endif
+
     for (size_t g = 0; g < count; g++)
     {
         int gr_num = base_gr_num + g;
@@ -409,6 +416,12 @@ createGrains(
         nucleate_grain(&nuc, &grain_cache[gr_num]);
         dprintf("putting a grain into offset %d\n", gr_num);
     }
+
+#ifdef GPU_OMP
+    // gr has changed and needs to be updated on GPU
+#pragma omp target update to(gr[0:lsp->totaldim])
+    profile(OFFLOADING_CPU_GPU);
+#endif
 }
 
 
@@ -706,6 +719,11 @@ calculateGrainSizes(
     size_t * sizes)
 {
     int *gr = sb->gr;
+#ifdef GPU_OMP
+    // needs copy of gr on CPU for that calculation
+#pragma omp target update from(gr[0:lsp->totaldim])
+    profile(OFFLOADING_GPU_CPU);
+#endif
 
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
@@ -737,6 +755,7 @@ output_grains(
 #ifndef PATH_MAX
 #define PATH_MAX 512
 #endif
+
     size_t *grainsizes;
     xmalloc(grainsizes, size_t, bp->num_grains);
     // First, collate grain sizes
