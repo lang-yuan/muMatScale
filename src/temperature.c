@@ -61,12 +61,13 @@ direct_temp_calc(
         else if (bp->thermal_ana == 1)
         {
             double lv = bp->lv;
-            double ls = bp->lsd / 2 / 1.414;
+            double invlv = 1./lv;
+            double ls = bp->lsd / (2. * 1.414);
 
             double xlen = bp->gnsbx * bp->gsdimx * bp->cellSize;        // lenght of x direction
             xlen = xlen + bp->lsd;
-            double tline = xlen / lv;   //time for each line in x direction
-            double tpause = 1.5e-4 / lv;
+            double tline = xlen * invlv;   //time for each line in x direction
+            double tpause = 1.5e-4 * invlv;
             tline = tline + tpause;
             //tline = 3.5e-3;
             double trackno = 0;
@@ -88,14 +89,13 @@ direct_temp_calc(
 
             if (rz <= znow + bp->cellSize)
             {
-
                 int nt = 400;
                 double lt;
                 double Tinteg = 0.0;
                 double Tlocal, Tfront;
                 double pi15 = 5.568328;
-                double lalpha = bp->lthcon / bp->rho / bp->lcp;
-                double tsteady = 20 * lalpha / lv / lv;
+                double lalpha = bp->lthcon / (bp->rho * bp->lcp);
+                double tsteady = 20 * lalpha * invlv * invlv;
                 double ldt = tsteady / nt;
 
                 if (sim_time < 1e-4)
@@ -104,15 +104,15 @@ direct_temp_calc(
                 for (int i = 0; i < nt; i++)
                 {
                     lt = (0.5 + i) * ldt;
-                    Tlocal = sqrt(lalpha * lt) * (ls * ls + 4 * lalpha * lt);
+                    Tlocal = sqrt(lalpha * lt) * (ls * ls + 4. * lalpha * lt);
                     Tinteg +=
                         ldt *
                         exp(-((lx + lv * lt) * (lx + lv * lt) + ly * ly) /
-                            (ls * ls + 4 * lalpha * lt) -
-                            (lz * lz / 4 / lalpha / lt)) / Tlocal;
+                            (ls * ls + 4. * lalpha * lt) -
+                            (lz * lz / (4. * lalpha * lt))) / Tlocal;
                 }
 
-                Tfront = bp->lab * lpow * lalpha / pi15 / bp->lthcon;
+                Tfront = bp->lab * lpow * lalpha / (pi15 * bp->lthcon);
                 T = bp->liniT + Tfront * Tinteg;
             }
             else
