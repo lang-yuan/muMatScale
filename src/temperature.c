@@ -265,9 +265,8 @@ tempUpdateSB_int(
 #ifdef GPU_OMP
 #ifndef GPU_OMP_NUC
 #pragma omp target update from(temperature[0:totaldim])
-#endif
-#pragma omp target update from(lsindex[0:totaldim])
     profile(OFFLOADING_GPU_CPU);
+#endif
 #endif
 
 }
