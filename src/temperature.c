@@ -9,6 +9,7 @@
 #include "globals.h"
 #include "functions.h"
 #include "temperature.h"
+#include "profiler.h"
 
 #include <math.h>
 #include <assert.h>
@@ -259,11 +260,14 @@ tempUpdateSB_int(
         }
     }
 
+    profile(TEMP_UPDATE);
+
 #ifdef GPU_OMP
 #ifndef GPU_OMP_NUC
 #pragma omp target update from(temperature[0:totaldim])
 #endif
 #pragma omp target update from(lsindex[0:totaldim])
+    profile(OFFLOADING_GPU_CPU);
 #endif
 
 }

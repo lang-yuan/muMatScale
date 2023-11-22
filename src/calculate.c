@@ -37,7 +37,6 @@ extern int gLogStateEndID;
 
 #include "curvature.h"
 
-double gsolid_volume;
 SB_struct *lsp;
 
 
@@ -223,11 +222,8 @@ doiteration(
                 registerCommInfo(sizeof(double));
         }
 
-        gsolid_volume = 0;
     }
 
-    gsolid_volume = 0;
-    double solid_volume = 0;
     {
         // start communication for cl
         {
@@ -247,7 +243,6 @@ doiteration(
         // Produces:  temperature
         {
             tempUpdate(false);
-            profile(TEMP_UPDATE);
         }
 
         // Uses No Halo:  mold, gr, nuc_threshold, temperature
@@ -255,14 +250,13 @@ doiteration(
         // Produces:  gr
         {
             cell_nucleation(lsp, NULL);
-            profile(CALC_NUCLEATION);
         }
         {
             // update gr on CPU before ops on gr
             gr_dataexchange_from(lsp, NULL);
 
             activateNewGrains();
-            profile(GRAIN_ACTIVATION);
+
             gr_dataexchange_to(lsp, NULL);
         }
 
@@ -272,16 +266,13 @@ doiteration(
 
         {
             FinishExchangeForVar(cl_var, lsp->cl);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
         {
             FinishExchangeForVar(fs_var, lsp->fs);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
         {
             FinishExchangeForVar(grain_var, lsp->gr);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
         // Uses No Halo: ce
@@ -317,12 +308,10 @@ doiteration(
         // finish communications for dc
         {
             FinishExchangeForVar(dc_var, lsp->dc);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
         // finish communications for d
         {
             FinishExchangeForVar(d_var, lsp->d);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
 #ifdef INDEX_SEP
@@ -337,9 +326,8 @@ doiteration(
         // Uses w/ Halo: gr, dc, d
         // Produces: gr, dc, fs, cl
         {
-            capture_octahedra_diffuse(lsp, &solid_volume);
+            capture_octahedra_diffuse(lsp);
             profile(CALC_CAPTURE_OCTAHEDRA);
-            gsolid_volume += solid_volume;
             timing(COMPUTATION, timer_elapsed());
         }
     }
@@ -347,9 +335,11 @@ doiteration(
     timing(COMPUTATION, timer_elapsed());
 
     //                all tasks - synchronization point for each time step
+    double gsolid_volume = solid_volume(lsp);
     double svol;
     MPI_Reduce(&gsolid_volume, &svol, 1, MPI_DOUBLE,
                MPI_SUM, 0, mpi_comm_new);
+    profile(REDUCE_FS);
     timing(COMMUNICATION, timer_elapsed());
 
     first_time = 0;

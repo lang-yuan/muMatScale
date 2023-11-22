@@ -32,7 +32,7 @@ pack_double(
 
 #ifdef GPU_PACK
 #pragma omp target update from(buffer[0:nblocks*bsize])
-    profile(OFFLOADING_GPU_CPU);
+    profile(PACKING_GPU_CPU);
 #endif
 }
 
@@ -56,7 +56,7 @@ pack_int(
 
 #ifdef GPU_PACK
 #pragma omp target update from(buffer[0:nblocks*bsize])
-    profile(OFFLOADING_GPU_CPU);
+    profile(PACKING_GPU_CPU);
 #endif
 }
 
@@ -85,7 +85,7 @@ pack_3double(
 
 #ifdef GPU_PACK
 #pragma omp target update from(buffer[0:nblocks*bsize3])
-    profile(OFFLOADING_GPU_CPU);
+    profile(PACKING_GPU_CPU);
 #endif
 }
 
@@ -130,7 +130,7 @@ unpack_double(
 {
 #ifdef GPU_PACK
 #pragma omp target update to(buffer[0:nblocks*bsize])
-    profile(OFFLOADING_CPU_GPU);
+    profile(PACKING_CPU_GPU);
 #pragma omp target teams distribute parallel for simd collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)
@@ -149,7 +149,7 @@ unpack_int(
 {
 #ifdef GPU_PACK
 #pragma omp target update to(buffer[0:nblocks*bsize])
-    profile(OFFLOADING_CPU_GPU);
+    profile(PACKING_CPU_GPU);
 #pragma omp target teams distribute parallel for simd collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)
@@ -172,7 +172,7 @@ unpack_3double(
 
 #ifdef GPU_PACK
 #pragma omp target update to(buffer[0:3*nblocks*bsize])
-    profile(OFFLOADING_CPU_GPU);
+    profile(PACKING_CPU_GPU);
 #pragma omp target teams distribute parallel for simd collapse(2)
 #endif
     for (int i = 0; i < nblocks; i++)

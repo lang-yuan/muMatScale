@@ -15,9 +15,8 @@ typedef enum
 {
     SETUP = 0,
     TEMPERATURE_PREPARE,
-    PROF_IDLE,
     PROF_CHECKPOINT,
-    DISTRIBUTION,
+    HDF_OUTPUT,
     PROF_OUTPUT,
     FACE_EXCHNG_LOCAL,
     FACE_EXCHNG_REMOTE_SEND,
@@ -34,8 +33,10 @@ typedef enum
     GRAIN_ACTIV_SYNC2,
     OFFLOADING_CPU_GPU,
     OFFLOADING_GPU_CPU,
-    TIMER_1,
-    TIMER_2,
+    OFFLOADING_IO,
+    PACKING_CPU_GPU,
+    PACKING_GPU_CPU,
+    REDUCE_FS,
     UNPACKING,
     PACKING,
     INITIALIZATION,             //[1] Application initialization time
