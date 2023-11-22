@@ -719,6 +719,33 @@ grow_cell_reduction(
 #endif
 }
 
+double
+reduce_fs(
+    SB_struct * lsp)
+{
+    double sum_fs = 0.0;
+    double *fs = lsp->fs;
+    int dimx = bp->gsdimx;
+    int dimy = bp->gsdimy;
+    int dimz = bp->gsdimz;
+
+#if defined(GPU_OMP)
+#pragma omp target teams distribute parallel for collapse(3) reduction(+:sum_fs) schedule(static,1)
+#endif
+    for (int k = 1; k <= dimz; k++)
+    {
+        for (int j = 1; j <= dimy; j++)
+        {
+            for (int i = 1; i <= dimx; i++)
+            {
+                int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
+                sum_fs += MIN(1.0, fs[idx]);
+            }
+        }
+    }
+
+    return sum_fs;
+}
 
 /**
  * Determine if a growing octahedral grain captures a cell
@@ -727,17 +754,11 @@ grow_cell_reduction(
  */
 void
 capture_octahedra_diffuse(
-    SB_struct * lsp,
-    void *vsolid_volume)
+    SB_struct * lsp)
 {
     double* d = lsp->d;
     decentered_t* dc = lsp->dc;
     int *gr = lsp->gr;
-
-    double *solid_volume = (double *) vsolid_volume;
-    double sum_fs = 0.0;
-    uint64_t solid_count = 0;
-
 
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
@@ -955,21 +976,6 @@ capture_octahedra_diffuse(
         dc[idx].z = dc_tmp[i].z;
     }
 
-#if defined(GPU_OMP)
-#pragma omp target teams distribute parallel for collapse(3) reduction(+:sum_fs) schedule(static,1)
-#endif
-    for (int k = 1; k <= dimz; k++)
-    {
-        for (int j = 1; j <= dimy; j++)
-        {
-            for (int i = 1; i <= dimx; i++)
-            {
-                int idx = k * (dimy + 2) * (dimx + 2) + j * (dimx + 2) + i;
-                sum_fs += MIN(1.0, fs[idx]);
-            }
-        }
-    }
-
 #else // orignal code without INDEX_SEP
 
 
@@ -1125,13 +1131,19 @@ capture_octahedra_diffuse(
                     }
                 }
 
-                sum_fs += MIN(1.0, fs[idx]);
             }
         }
     }
 
 #endif //INDEX_SEP
-    (*solid_volume) += sum_fs * pow(bp->cellSize, 3.0);
-    dwrite(DEBUG_TASK_CTRL, "(sb: %d) Returning %lu solids\n",
-           lsp->subblockid, solid_count);
 }
+
+double
+solid_volume(
+    SB_struct * lsp)
+{
+    double sum_fs = reduce_fs(lsp);
+
+    return sum_fs * pow(bp->cellSize, 3.0);
+}
+

@@ -35,7 +35,7 @@ typedef enum
     OFFLOADING_CPU_GPU,
     OFFLOADING_GPU_CPU,
     TIMER_1,
-    TIMER_2,
+    REDUCE_FS,
     UNPACKING,
     PACKING,
     INITIALIZATION,             //[1] Application initialization time

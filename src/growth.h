@@ -15,8 +15,7 @@ void fs_change_diffuse(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused);
 void capture_octahedra_diffuse(
-    SB_struct * lsp,
-    void *vsolid_volume);
+    SB_struct * lsp);
 void grow_octahedra(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused);
@@ -33,4 +32,7 @@ void gr_dataexchange_to(
 void gr_dataexchange_from(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused);
+
+double solid_volume(
+    SB_struct * lsp);
 #endif
