@@ -59,7 +59,6 @@ SetupInitialConditions(
     for (int i = 0; i < full_volume; i++)
     {
         lsp->nuc_threshold[i] = INFINITY;
-        lsp->lsindex[i] = 1;
 
         if (bp->calc_type == DIFFUSION)
         {
