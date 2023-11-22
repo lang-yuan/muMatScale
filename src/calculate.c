@@ -252,12 +252,7 @@ doiteration(
             cell_nucleation(lsp, NULL);
         }
         {
-            // update gr on CPU before ops on gr
-            gr_dataexchange_from(lsp, NULL);
-
             activateNewGrains();
-
-            gr_dataexchange_to(lsp, NULL);
         }
 
         {

@@ -22,31 +22,6 @@
 #include "xmalloc.h"
 
 
-void
-gr_dataexchange_to(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-    int* gr = lsp->gr;
-#pragma omp target update to(gr[0:lsp->totaldim])
-    profile(OFFLOADING_CPU_GPU);
-#endif
-}
-
-void
-gr_dataexchange_from(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused)
-{
-#ifdef GPU_OMP
-    int* gr = lsp->gr;
-#pragma omp target update from(gr[0:lsp->totaldim])
-    profile(OFFLOADING_GPU_CPU);
-#endif
-}
-
-
 /**
  * Calculate the diffusion for each cell in the subblock
  * \param[in] vlsp Pointer to the subblock
