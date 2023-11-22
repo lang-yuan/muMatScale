@@ -37,7 +37,6 @@ extern int gLogStateEndID;
 
 #include "curvature.h"
 
-double gsolid_volume;
 SB_struct *lsp;
 
 
@@ -223,11 +222,8 @@ doiteration(
                 registerCommInfo(sizeof(double));
         }
 
-        gsolid_volume = 0;
     }
 
-    gsolid_volume = 0;
-    double solid_volume = 0;
     {
         // start communication for cl
         {
@@ -337,9 +333,8 @@ doiteration(
         // Uses w/ Halo: gr, dc, d
         // Produces: gr, dc, fs, cl
         {
-            capture_octahedra_diffuse(lsp, &solid_volume);
+            capture_octahedra_diffuse(lsp);
             profile(CALC_CAPTURE_OCTAHEDRA);
-            gsolid_volume += solid_volume;
             timing(COMPUTATION, timer_elapsed());
         }
     }
@@ -347,9 +342,11 @@ doiteration(
     timing(COMPUTATION, timer_elapsed());
 
     //                all tasks - synchronization point for each time step
+    double gsolid_volume = solid_volume(lsp);
     double svol;
     MPI_Reduce(&gsolid_volume, &svol, 1, MPI_DOUBLE,
                MPI_SUM, 0, mpi_comm_new);
+    profile(REDUCE_FS);
     timing(COMMUNICATION, timer_elapsed());
 
     first_time = 0;

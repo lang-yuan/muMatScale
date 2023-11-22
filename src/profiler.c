@@ -35,7 +35,7 @@ static char *bucket_names[] = {
     "Offloading CPU-GPU",
     "Offloading GPU-CPU",
     "Timer Temp1",
-    "Timer Temp2",
+    "Reduce fs",
     "unPacking",
     "Packing",
     "Initialization",
