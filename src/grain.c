@@ -892,6 +892,8 @@ activateNewGrains(
 
     bp->num_grains += new_activations;
     numNewGrains = 0;
+
+    profile(GRAIN_ACTIVATION);
 }
 
 
@@ -1127,8 +1129,6 @@ cell_nucleation(
 
 #else // i.e. NUC_SEP defined
 
-    profile(CALC_NUCLEATION);
-
 #ifdef NUC_THREELIST
 
     int nindex = 0;
@@ -1298,6 +1298,8 @@ cell_nucleation(
 //profile(TIMER_3);
     numNewGrains = nindex2;
 #endif
+
+    profile(CALC_NUCLEATION);
 
 #ifdef GPU_OMP_NUC
 #pragma omp target update from(newGrainLocs[0:nindex2])

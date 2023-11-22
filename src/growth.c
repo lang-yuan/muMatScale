@@ -28,8 +28,9 @@ gr_dataexchange_to(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-int* gr = lsp->gr;
-#pragma omp target update to(gr[0:lsp->totaldim])  //nowait
+    int* gr = lsp->gr;
+#pragma omp target update to(gr[0:lsp->totaldim])
+    profile(OFFLOADING_CPU_GPU);
 #endif
 }
 
@@ -39,8 +40,9 @@ gr_dataexchange_from(
     void * __attribute__ ((__unused__)) __unused)
 {
 #ifdef GPU_OMP
-int* gr = lsp->gr;
-#pragma omp target update from(gr[0:lsp->totaldim])        //nowait
+    int* gr = lsp->gr;
+#pragma omp target update from(gr[0:lsp->totaldim])
+    profile(OFFLOADING_GPU_CPU);
 #endif
 }
 

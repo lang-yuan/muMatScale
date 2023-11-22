@@ -21,7 +21,8 @@
 #include "ll.h"
 #include "grain.h"
 #include "xmalloc.h"
-//#include "/usr/lib/x86_64-linux-gnu/hdf5/serial/include/hdf5.h"
+#include "profiler.h"
+
 #ifndef PATH_MAX
 #define PATH_MAX 512
 #endif
@@ -460,8 +461,9 @@ writeGlobalHeavyData(
     }
     xfree(angles);
 
-
     H5Fclose(file_id);
+
+    profile(HDF_OUTPUT);
 }
 
 
@@ -596,10 +598,11 @@ xdmf_writeSubblocks(
         assert(lsp != NULL);
         SB_struct *sb = lsp;
 
-                /***** TEMPERATURE *****/
+         /***** TEMPERATURE *****/
 #if defined(GPU_OMP)
         double *temperature = sb->temperature;
-#pragma omp target update from(temperature[0:sb->totaldim])     //nowait
+#pragma omp target update from(temperature[0:sb->totaldim])
+        profile(OFFLOADING_IO);
 #endif
         hid_t temp = H5Dcreate(file_id, get_subblock_path(sb, "Temperature"),
                                H5T_NATIVE_DOUBLE, dataspace, link_pl,
@@ -607,14 +610,16 @@ xdmf_writeSubblocks(
         H5Dwrite(temp, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
                  sb->temperature);
         H5Dclose(temp);
+        profile(HDF_OUTPUT);
 
 
-                /***** SOLUTE COMPOSITION *****/
+        /***** SOLUTE COMPOSITION *****/
         if (bp->calc_type == DIFFUSION)
         {
 #if defined(GPU_OMP)
             double *ce = sb->ce;
-#pragma omp target update from(ce[0:sb->totaldim])      //nowait
+#pragma omp target update from(ce[0:sb->totaldim])
+            profile(OFFLOADING_IO);
 #endif
 
             hid_t fce = H5Dcreate(file_id, get_subblock_path(sb, "CE"),
@@ -623,23 +628,31 @@ xdmf_writeSubblocks(
             H5Dwrite(fce, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
                      sb->ce);
             H5Dclose(fce);
+            profile(HDF_OUTPUT);
         }
 
-                /***** GRAIN *****/
+        /***** GRAIN *****/
         hid_t grain = H5Dcreate(file_id, get_subblock_path(sb, "Grain"),
                                 H5T_NATIVE_INT, dataspace, link_pl,
                                 dataspace_pl, H5P_DEFAULT);
         H5Dwrite(grain, H5T_NATIVE_INT, memspace, H5S_ALL, H5P_DEFAULT,
                  sb->gr);
         H5Dclose(grain);
+        profile(HDF_OUTPUT);
 
-                /***** Fraction Solid *****/
-        hid_t fs = H5Dcreate(file_id, get_subblock_path(sb, "FracSolid"),
+        /***** Fraction Solid *****/
+#if defined(GPU_OMP)
+            double *fs = sb->fs;
+#pragma omp target update from(fs[0:sb->totaldim])
+            profile(OFFLOADING_IO);
+#endif
+        hid_t ffs = H5Dcreate(file_id, get_subblock_path(sb, "FracSolid"),
                              H5T_NATIVE_DOUBLE, dataspace, link_pl,
                              dataspace_pl, H5P_DEFAULT);
-        H5Dwrite(fs, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
+        H5Dwrite(ffs, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
                  sb->fs);
-        H5Dclose(fs);
+        H5Dclose(ffs);
+        profile(HDF_OUTPUT);
     }
 
 

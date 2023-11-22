@@ -243,7 +243,6 @@ doiteration(
         // Produces:  temperature
         {
             tempUpdate(false);
-            profile(TEMP_UPDATE);
         }
 
         // Uses No Halo:  mold, gr, nuc_threshold, temperature
@@ -251,14 +250,13 @@ doiteration(
         // Produces:  gr
         {
             cell_nucleation(lsp, NULL);
-            profile(CALC_NUCLEATION);
         }
         {
             // update gr on CPU before ops on gr
             gr_dataexchange_from(lsp, NULL);
 
             activateNewGrains();
-            profile(GRAIN_ACTIVATION);
+
             gr_dataexchange_to(lsp, NULL);
         }
 
@@ -268,16 +266,13 @@ doiteration(
 
         {
             FinishExchangeForVar(cl_var, lsp->cl);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
         {
             FinishExchangeForVar(fs_var, lsp->fs);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
         {
             FinishExchangeForVar(grain_var, lsp->gr);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
         // Uses No Halo: ce
@@ -313,12 +308,10 @@ doiteration(
         // finish communications for dc
         {
             FinishExchangeForVar(dc_var, lsp->dc);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
         // finish communications for d
         {
             FinishExchangeForVar(d_var, lsp->d);
-            profile(FACE_EXCHNG_REMOTE_WAIT);
         }
 
 #ifdef INDEX_SEP
