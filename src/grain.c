@@ -1321,6 +1321,6 @@ cell_nucleation(
     profile(CALC_NUCLEATION);
 
 #ifdef GPU_OMP_NUC
-#pragma omp target update from(newGrainLocs[0:nindex2])
+#pragma omp target update from(newGrainLocs[0:numGrainPerSub])
 #endif
 }
