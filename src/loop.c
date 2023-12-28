@@ -16,6 +16,7 @@
 #include "calculate.h"
 #include "file_io.h"
 #include "checkpoint.h"
+#include "growth.h"
 
 #include <time.h>
 
@@ -55,7 +56,7 @@ outputscreenHeader(
  */
 void
 outputscreen(
-    double gStartTime)
+    double gStartTime, double fs)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -63,7 +64,7 @@ outputscreen(
 
     printf("%s%10g  %10g  %8.4lf%% %8d  %s \n", output_leader, t_end - gStartTime,      //elapsed wallclock time
            bp->timestep * bp->ts_delt,  //elapsed virtual time
-           100.0 * bp->fs,      //solid fraction attained
+           100.0 * fs,      //solid fraction attained
            bp->num_grains - 1, output_tailer);
     fflush(stdout);
 }
@@ -102,10 +103,11 @@ loop(
     if (bp->screenpfreq > 0 && rank == 0)
     {
         outputscreenHeader();
-        outputscreen(gStartTime);
+        outputscreen(gStartTime,0.);
     }
 
     int done = 0;
+    double fs = 0.;
 
     while (!done)
     {
@@ -121,15 +123,23 @@ loop(
         bp->timestep++;
 
         //printf("One step...\n");
-        //if (rank > 0)
-        double solid = doiteration();
+        doiteration();
 
-        // Gather Solid Fractions
-        bp->fs = solid / totalNonMoldVolume();
+        if (bp->screenpfreq > 0 && bp->timestep % bp->screenpfreq == 0)
+        {
+            // all tasks - synchronization point for each time step
+            double gsolid_volume = solid_volume(lsp);
+            double svol;
+            MPI_Reduce(&gsolid_volume, &svol, 1, MPI_DOUBLE,
+                        MPI_SUM, 0, mpi_comm_new);
+            profile(REDUCE_FS);
 
-        if (bp->screenpfreq > 0 && bp->timestep % bp->screenpfreq == 0
-            && rank == 0)
-            outputscreen(gStartTime);
+            // Gather Solid Fractions
+            fs = svol / totalNonMoldVolume();
+
+            if( rank == 0)
+                outputscreen(gStartTime,fs);
+        }
 
         if (bp->timestep >= bp->data_write_start)
             if (bp->data_write_freq > 0
@@ -170,7 +180,7 @@ loop(
                 done = 1;
                 printf("\nAuto-Finish time met.\n");
             }
-            if (bp->fs >= bp->fs_finish)
+            if (fs >= bp->fs_finish)
             {
                 printf("\nSolid Fraction termination condition met.\n");
                 done = 1;

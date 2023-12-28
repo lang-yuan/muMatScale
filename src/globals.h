@@ -348,9 +348,6 @@ typedef struct bbstruct
     double fs_finish;           // Fraction of Solid to finish at
     double finish_time;
 
-    // Current status
-    double fs;                  // Solid Fraction
-
     // Output Control
     int screenpfreq;
     char basefilename[256];

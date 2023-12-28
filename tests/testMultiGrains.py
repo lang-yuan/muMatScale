@@ -22,6 +22,7 @@ output = subprocess.check_output(command,shell=True)
 #analyse standard output
 lines=output.split(b'\n')
 
+expected_size =  7.14e-5
 for line in lines:
   if line.count(b'Average'):
     print(line)
@@ -31,7 +32,7 @@ for line in lines:
       print("Unexpected number of grains: Expected 336, got {}".format(ngrains))
       sys.exit(1)
     avg = eval(words[9])
-    if abs(avg-5.23e-05)>1.e-6:
+    if abs(avg-expected_size)>1.e-6:
       print("Unexpected average grain size: {}".format(avg))
       sys.exit(1)
 
