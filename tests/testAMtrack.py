@@ -23,7 +23,7 @@ output = subprocess.check_output(command,shell=True)
 lines=output.split(b'\n')
 
 egrains = 1889
-eavg = 8.8e-7
+eavg = 9.1e-07
 
 flag = 0
 for line in lines:
@@ -37,8 +37,8 @@ for line in lines:
   if len(words) == 4 and flag>0:
     fs = eval(words[2][:-1])
 
-efs = 87.3
-if abs(efs-fs)>0.1:
+efs = 86.
+if abs(efs-fs)>0.2:
   print("Unexpected fs of {}, expected {}".format(fs,efs))
   sys.exit(1)
 

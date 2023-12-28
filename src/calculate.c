@@ -256,18 +256,10 @@ doiteration(
         }
 
         {
-            ExchangeFacesForVar(grain_var, lsp->gr);
-        }
-
-        {
             FinishExchangeForVar(cl_var, lsp->cl);
         }
         {
             FinishExchangeForVar(fs_var, lsp->fs);
-        }
-
-        {
-            FinishExchangeForVar(grain_var, lsp->gr);
         }
 
         // Uses No Halo: ce
@@ -287,6 +279,10 @@ doiteration(
             profile(CALC_FS_CHANGE);
         }
 
+        {
+            ExchangeFacesForVar(grain_var, lsp->gr);
+        }
+
         // Uses No Halo: gr, fs, dc
         // Uses w/ Halo:
         // Produces: d, fs
@@ -304,6 +300,9 @@ doiteration(
         {
             FinishExchangeForVar(dc_var, lsp->dc);
         }
+        {
+            FinishExchangeForVar(grain_var, lsp->gr);
+        }
         // finish communications for d
         {
             FinishExchangeForVar(d_var, lsp->d);
@@ -317,8 +316,19 @@ doiteration(
         }
 #endif
 
-        // Uses No Halo: mold, fs, cl, ce, diff_id, ogr
-        // Uses w/ Halo: gr, dc, d
+        int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
+        int *ogr = lsp->ogr;
+        int *gr = lsp->gr;
+#if defined(GPU_OMP)
+#pragma omp target teams distribute parallel for schedule(static, 1)
+#endif
+        for (int i = 0; i < totaldim; i++)
+        {
+            ogr[i] = gr[i];
+        }
+
+        // Uses No Halo: mold, fs, cl, ce, diff_id
+        // Uses w/ Halo: ogr, dc, d
         // Produces: gr, dc, fs, cl
         {
             capture_octahedra_diffuse(lsp);

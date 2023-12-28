@@ -49,11 +49,6 @@ sb_diffuse_alloy_decentered(
              bp->ts_delt);
     }
 
-#ifndef GPU_OMP
-    memcpy(lsp->ogr, lsp->gr,
-           (dimx + 2) * (dimy + 2) * (dimz + 2) * sizeof(int));
-#endif
-
     int totaldim = (dimx + 2) * (dimy + 2) * (dimz + 2);
 
 // copy ce into oce before updating ce
@@ -347,7 +342,6 @@ fs_change_diffuse(
     double *fs = lsp->fs;
     double* cl = lsp->cl;
     double *temperature = lsp->temperature;
-    int* ogr = lsp->ogr;
     int* gr = lsp->gr;
 
 #ifndef FSSEP
@@ -375,7 +369,6 @@ fs_change_diffuse(
                 if (gr[idx] <= 0 || Tcell < 1.0 || Tcell > Tliq)
                 {
                     cl[idx] = ce[idx];
-                    ogr[idx] = 0;
                     gr[idx] = 0;
                     fs[idx] = 0;
                     continue;
@@ -415,7 +408,6 @@ fs_change_diffuse(
                 {
                     fs[idx] = 0.;
                     gr[idx] = 0;
-                    ogr[idx] = 0;
                     dfs = 0;
                     cl[idx] = ce[idx];
                 }
@@ -604,16 +596,6 @@ grow_octahedra(
         d[idx] = ds1 + fs[idx] * fsgrow;
     }
 #endif //GROWSEP
-
-    int *ogr = lsp->ogr;
-#if defined(GPU_OMP)
-#pragma omp target teams distribute parallel for schedule(static, 1)
-#endif
-    for (int i = 0; i < totaldim; i++)
-    {
-        ogr[i] = gr[i];
-    }
-
 }
 
 void
