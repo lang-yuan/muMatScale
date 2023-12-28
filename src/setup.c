@@ -153,6 +153,15 @@ allocateFields(
 
     allocate_int(&(lsp->lsindex));
 
+    // allocate arrays for IO
+    allocate_sp(&(lsp->fs_io));
+    allocate_sp(&(lsp->temperature_io));
+    allocate_int(&(lsp->gr_io));
+    if (bp->calc_type == DIFFUSION)
+    {
+        allocate_sp(&(lsp->ce_io));
+    }
+
     int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
 
     memset(lsp->cl, 0, totaldim*sizeof(double));
@@ -206,6 +215,16 @@ allocateFields(
 #pragma omp target enter data map(to:oce[0:totaldim]) nowait
     double *ce = lsp->ce;
 #pragma omp target enter data map(to:ce[0:totaldim]) nowait
+
+// IO arrays
+    float* fs_io = lsp->fs_io;
+#pragma omp target enter data map(to:fs_io[0:totaldim]) nowait
+    float *ce_io = lsp->ce_io;
+#pragma omp target enter data map(to:ce_io[0:totaldim]) nowait
+    float *temperature_io = lsp->temperature_io;
+#pragma omp target enter data map(to:temperature_io[0:totaldim])
+    int* gr_io = lsp->gr_io;
+#pragma omp target enter data map(to:gr_io[0:totaldim]) nowait
 
 #endif
 

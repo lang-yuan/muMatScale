@@ -439,23 +439,23 @@ writeGlobalHeavyData(
 
     // Grain Rotation
     const char lbl[] = { 'X', 'Y', 'Z' };
-    double *angles;
-    xmalloc(angles, double,
+    float *angles;
+    xmalloc(angles, float,
             ngr);
     for (int d = 0; d < 3; d++)
     {
         for (size_t i = 0; i < ngr; i++)
         {
-            angles[i] = grain_cache[i].rotang[d];
+            angles[i] = (float)grain_cache[i].rotang[d];
         }
 
         char dsName[256] = { 0 };
         sprintf(dsName, "/GrainAngle%c", lbl[d]);
 
-        hid_t dataset = H5Dcreate(file_id, dsName, H5T_NATIVE_DOUBLE,
+        hid_t dataset = H5Dcreate(file_id, dsName, H5T_NATIVE_FLOAT,
                                   dataspace, H5P_DEFAULT, dataspace_pl,
                                   H5P_DEFAULT);
-        H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+        H5Dwrite(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
                  angles);
         H5Dclose(dataset);
     }
@@ -575,6 +575,8 @@ xdmf_writeSubblocks(
     count[1] = bp->gsdimy;
     count[2] = bp->gsdimx;
 
+    int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
+
     // TODO:  Find best chunk size
     hsize_t chunkdims[3];
     chunkdims[0] = bp->gsdimz;
@@ -600,15 +602,15 @@ xdmf_writeSubblocks(
 
          /***** TEMPERATURE *****/
 #if defined(GPU_OMP)
-        double *temperature = sb->temperature;
-#pragma omp target update from(temperature[0:sb->totaldim])
+        float *temperature_io = sb->temperature_io;
+#pragma omp target update from(temperature_io[0:totaldim])
         profile(OFFLOADING_IO);
 #endif
         hid_t temp = H5Dcreate(file_id, get_subblock_path(sb, "Temperature"),
-                               H5T_NATIVE_DOUBLE, dataspace, link_pl,
+                               H5T_NATIVE_FLOAT, dataspace, link_pl,
                                dataspace_pl, H5P_DEFAULT);
-        H5Dwrite(temp, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
-                 sb->temperature);
+        H5Dwrite(temp, H5T_NATIVE_FLOAT, memspace, H5S_ALL, H5P_DEFAULT,
+                 sb->temperature_io);
         H5Dclose(temp);
         profile(HDF_OUTPUT);
 
@@ -617,40 +619,45 @@ xdmf_writeSubblocks(
         if (bp->calc_type == DIFFUSION)
         {
 #if defined(GPU_OMP)
-            double *ce = sb->ce;
-#pragma omp target update from(ce[0:sb->totaldim])
+            float *ce_io = sb->ce_io;
+#pragma omp target update from(ce_io[0:totaldim])
             profile(OFFLOADING_IO);
 #endif
 
             hid_t fce = H5Dcreate(file_id, get_subblock_path(sb, "CE"),
-                                  H5T_NATIVE_DOUBLE, dataspace, link_pl,
+                                  H5T_NATIVE_FLOAT, dataspace, link_pl,
                                   dataspace_pl, H5P_DEFAULT);
-            H5Dwrite(fce, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
-                     sb->ce);
+            H5Dwrite(fce, H5T_NATIVE_FLOAT, memspace, H5S_ALL, H5P_DEFAULT,
+                     sb->ce_io);
             H5Dclose(fce);
             profile(HDF_OUTPUT);
         }
 
         /***** GRAIN *****/
+#if defined(GPU_OMP)
+            int *gr_io = sb->gr_io;
+#pragma omp target update from(gr_io[0:totaldim])
+            profile(OFFLOADING_IO);
+#endif
         hid_t grain = H5Dcreate(file_id, get_subblock_path(sb, "Grain"),
                                 H5T_NATIVE_INT, dataspace, link_pl,
                                 dataspace_pl, H5P_DEFAULT);
         H5Dwrite(grain, H5T_NATIVE_INT, memspace, H5S_ALL, H5P_DEFAULT,
-                 sb->gr);
+                 sb->gr_io);
         H5Dclose(grain);
         profile(HDF_OUTPUT);
 
         /***** Fraction Solid *****/
 #if defined(GPU_OMP)
-            double *fs = sb->fs;
-#pragma omp target update from(fs[0:sb->totaldim])
+            float *fs_io = sb->fs_io;
+#pragma omp target update from(fs_io[0:totaldim])
             profile(OFFLOADING_IO);
 #endif
         hid_t ffs = H5Dcreate(file_id, get_subblock_path(sb, "FracSolid"),
-                             H5T_NATIVE_DOUBLE, dataspace, link_pl,
+                             H5T_NATIVE_FLOAT, dataspace, link_pl,
                              dataspace_pl, H5P_DEFAULT);
-        H5Dwrite(ffs, H5T_NATIVE_DOUBLE, memspace, H5S_ALL, H5P_DEFAULT,
-                 sb->fs);
+        H5Dwrite(ffs, H5T_NATIVE_FLOAT, memspace, H5S_ALL, H5P_DEFAULT,
+                 sb->fs_io);
         H5Dclose(ffs);
         profile(HDF_OUTPUT);
     }

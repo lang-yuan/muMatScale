@@ -69,6 +69,49 @@ outputscreen(
     fflush(stdout);
 }
 
+// copy data into (lower precision) arrays for IO
+void
+cache_io_data()
+{
+    const int dimx = bp->gsdimx;
+    const int dimy = bp->gsdimy;
+    const int dimz = bp->gsdimz;
+
+    int totaldim = (dimx + 2) * (dimy + 2) * (dimz + 2);
+
+    double* fs = lsp->fs;
+    float* fs_io = lsp->fs_io;
+#if defined(GPU_OMP)
+#pragma omp target teams distribute parallel for schedule(static,1)
+#endif
+    for (int i = 0; i < totaldim; i++)
+        fs_io[i] = (float)fs[i];
+
+    double* ce = lsp->ce;
+    float* ce_io = lsp->ce_io;
+#if defined(GPU_OMP)
+#pragma omp target teams distribute parallel for schedule(static,1)
+#endif
+    for (int i = 0; i < totaldim; i++)
+        ce_io[i] = (float)ce[i];
+
+    double* temperature = lsp->temperature;
+    float* temperature_io = lsp->temperature_io;
+#if defined(GPU_OMP)
+#pragma omp target teams distribute parallel for schedule(static,1)
+#endif
+    for (int i = 0; i < totaldim; i++)
+        temperature_io[i] = (float)temperature[i];
+
+    int *gr = lsp->gr;
+    int *gr_io = lsp->gr_io;
+#if defined(GPU_OMP)
+#pragma omp target teams distribute parallel for schedule(static,1)
+#endif
+    for (int i = 0; i < totaldim; i++)
+        gr_io[i] = gr[i];
+}
+
 // main work loop
 void
 loop(
@@ -89,6 +132,7 @@ loop(
 
     if (bp->data_write_freq > 0 && !restart)
     {
+        cache_io_data();
         // Write out the visualization files for each subblock
         // the number passed from the main becomes the sequence number
         if (rank == 0)
@@ -145,6 +189,8 @@ loop(
             if (bp->data_write_freq > 0
                 && bp->timestep % bp->data_write_freq == 0)
             {
+                cache_io_data();
+
                 if (rank == 0)
                     writeMain();
                 writeSubblocks();
@@ -193,6 +239,8 @@ loop(
     // Output final solution (only if we haven't already)
     if (bp->data_write_freq > 0 && !(bp->timestep % bp->data_write_freq == 0))
     {
+        cache_io_data();
+
         if (rank == 0)
         {
             writeMain();

@@ -449,6 +449,18 @@ getRandScale(
  * of type \c double with a size equal to a subblock, including HALO
  */
 void
+allocate_sp(
+    float **f)
+{
+    xmalloc(*f, float,
+              (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2));
+}
+
+/**
+ * Allocates memory, and tags for automatic freeing, an array
+ * of type \c double with a size equal to a subblock, including HALO
+ */
+void
 allocate_float(
     double **f)
 {
