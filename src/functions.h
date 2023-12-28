@@ -216,10 +216,12 @@ float getRandScale(
     void);
 
 
-
-
-
-
+/**
+ * Allocates memory, an array
+ * of type \c double with a size equal to a subblock, including HALO
+ */
+void allocate_sp(
+    float **f);
 
 /**
  * Allocates memory, an array

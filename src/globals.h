@@ -201,6 +201,12 @@ typedef struct subblock
     double *ce, *oce;
     double *cl;
 
+    // for IO
+    float *fs_io;
+    float *ce_io;
+    float *temperature_io;
+    int   *gr_io;
+
     double *curv;
 
     int *diff_id;
