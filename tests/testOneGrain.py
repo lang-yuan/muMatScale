@@ -22,7 +22,7 @@ output = subprocess.check_output(command,shell=True)
 #analyse standard output
 lines=output.split(b'\n')
 
-av = 0.000648625
+av = 0.000737875
 ng = 1
 
 for line in lines:

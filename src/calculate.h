@@ -16,7 +16,7 @@ extern uint64_t gsolid_count;   ///< Number of Solid Cells
 /**
  * Main "do work" function of the Task processes
  */
-double doiteration(
+void doiteration(
     );
 
 #endif

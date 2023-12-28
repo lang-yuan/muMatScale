@@ -63,7 +63,6 @@ set_defaults(
     bp->data_write_freq = 0;
     bp->data_write_start = 0;
     bp->checkpointfreq = 0;
-    bp->fs = 0.0f;
     bp->gg_const = 1e-5;
     bp->gg_cub = 0.0;
     bp->profile_write_freq = 0;

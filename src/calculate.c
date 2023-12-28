@@ -189,7 +189,7 @@ switch( v->datasize)
 /**
  * Main "do work" function
  */
-double
+void
 doiteration(
     )
 {
@@ -329,15 +329,5 @@ doiteration(
 
     timing(COMPUTATION, timer_elapsed());
 
-    //                all tasks - synchronization point for each time step
-    double gsolid_volume = solid_volume(lsp);
-    double svol;
-    MPI_Reduce(&gsolid_volume, &svol, 1, MPI_DOUBLE,
-               MPI_SUM, 0, mpi_comm_new);
-    profile(REDUCE_FS);
-    timing(COMMUNICATION, timer_elapsed());
-
     first_time = 0;
-
-    return svol;
 }
