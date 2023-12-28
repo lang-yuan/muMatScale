@@ -112,16 +112,82 @@ cache_io_data()
         gr_io[i] = gr[i];
 }
 
+void
+writeData()
+{
+    cache_io_data();
+
+    // Write out the visualization files for each subblock
+    if (iproc == 0)
+        writeMain();
+    writeSubblocks();
+
+    MPI_Barrier(mpi_comm_new);
+    profile(PROF_OUTPUT);
+    timing(FILEIO, timer_elapsed());
+}
+
+void
+writeCheckpoint()
+{
+    printf("Checkpoint at timestep %lu \n", bp->timestep);
+    if (iproc == 0)
+    {
+        writeMainCheckpoint();
+    }
+    writeTaskCheckpoint(bp->timestep);
+
+    MPI_Barrier(mpi_comm_new);
+    clean_checkpoint();
+    MPI_Barrier(mpi_comm_new);
+    profile(PROF_CHECKPOINT);
+    timing(FILEIO, timer_elapsed());
+}
+
+int
+checkDone(const double fs)
+{
+    int done = 0;
+
+    /* Check for exit conditions */
+    if (iproc == 0)
+    {
+        if (bp->finish_time
+            && ((bp->timestep * bp->ts_delt) >= bp->finish_time))
+        {
+            done = 1;
+            printf("\nAuto-Finish time met.\n");
+        }
+        if (fs >= bp->fs_finish)
+        {
+            printf("\nSolid Fraction termination condition met.\n");
+            done = 1;
+        }
+    }
+    MPI_Bcast(&done, 1, MPI_INT, 0, mpi_comm_new);
+
+    return done;
+}
+
+double
+computeFS()
+{
+    double gsolid_volume = solid_volume(lsp);
+    double svol;
+    MPI_Reduce(&gsolid_volume, &svol, 1, MPI_DOUBLE,
+                MPI_SUM, 0, mpi_comm_new);
+    profile(REDUCE_FS);
+
+    return svol / totalNonMoldVolume();
+}
+
 // main work loop
 void
 loop(
     uint64_t restart,
     double gStartTime)
 {
-    int rank;
-    MPI_Comm_rank(mpi_comm_new, &rank);
-
-    if (rank == 0)
+    if (iproc == 0)
     {
         printf("Initial Subblocks assigned.  Starting calculations.\n");
         time_t now = time(NULL);
@@ -132,19 +198,10 @@ loop(
 
     if (bp->data_write_freq > 0 && !restart)
     {
-        cache_io_data();
-        // Write out the visualization files for each subblock
-        // the number passed from the main becomes the sequence number
-        if (rank == 0)
-            writeMain();
-        writeSubblocks();
-
-        MPI_Barrier(mpi_comm_new);
-        profile(PROF_OUTPUT);
-        timing(FILEIO, timer_elapsed());
+        writeData();
     }
 
-    if (bp->screenpfreq > 0 && rank == 0)
+    if (bp->screenpfreq > 0 && iproc == 0)
     {
         outputscreenHeader();
         outputscreen(gStartTime,0.);
@@ -159,7 +216,7 @@ loop(
         // Activate subblocks if necessary based on temperature
         // Assign subblocks to processors
         // Send out neighbor lists
-        if (rank == 0)
+        if (iproc == 0)
             dwrite(DEBUG_MAIN_CTRL,
                    "-------------------------------------------------\n");
 
@@ -171,17 +228,9 @@ loop(
 
         if (bp->screenpfreq > 0 && bp->timestep % bp->screenpfreq == 0)
         {
-            // all tasks - synchronization point for each time step
-            double gsolid_volume = solid_volume(lsp);
-            double svol;
-            MPI_Reduce(&gsolid_volume, &svol, 1, MPI_DOUBLE,
-                        MPI_SUM, 0, mpi_comm_new);
-            profile(REDUCE_FS);
+            fs = computeFS();
 
-            // Gather Solid Fractions
-            fs = svol / totalNonMoldVolume();
-
-            if( rank == 0)
+            if( iproc == 0)
                 outputscreen(gStartTime,fs);
         }
 
@@ -189,83 +238,34 @@ loop(
             if (bp->data_write_freq > 0
                 && bp->timestep % bp->data_write_freq == 0)
             {
-                cache_io_data();
-
-                if (rank == 0)
-                    writeMain();
-                writeSubblocks();
-
-                MPI_Barrier(mpi_comm_new);
-                timing(FILEIO, timer_elapsed());
-                profile(PROF_OUTPUT);
-
+                writeData();
             }
 
         if (bp->checkpointfreq > 0 && bp->timestep % bp->checkpointfreq == 0)
         {
-            printf("Checkpoint at timestep %lu \n", bp->timestep);
-            if (rank == 0)
-            {
-                writeMainCheckpoint();
-            }
-            writeTaskCheckpoint(bp->timestep);
-
-            MPI_Barrier(mpi_comm_new);
-            clean_checkpoint();
-            MPI_Barrier(mpi_comm_new);
-            profile(PROF_CHECKPOINT);
-            timing(FILEIO, timer_elapsed());
+            writeCheckpoint();
         }
 
-        /* Check for exit conditions */
-        if (iproc == 0)
-        {
-            if (bp->finish_time
-                && ((bp->timestep * bp->ts_delt) >= bp->finish_time))
-            {
-                done = 1;
-                printf("\nAuto-Finish time met.\n");
-            }
-            if (fs >= bp->fs_finish)
-            {
-                printf("\nSolid Fraction termination condition met.\n");
-                done = 1;
-            }
-        }
-        MPI_Bcast(&done, 1, MPI_INT, 0, mpi_comm_new);
-
+        done = checkDone(fs);
     }                           // end of simulation main loop
 
     // Output final solution (only if we haven't already)
     if (bp->data_write_freq > 0 && !(bp->timestep % bp->data_write_freq == 0))
     {
-        cache_io_data();
-
-        if (rank == 0)
-        {
-            writeMain();
-        }
-        writeSubblocks();
-
-        MPI_Barrier(mpi_comm_new);
-        profile(PROF_OUTPUT);
-        timing(FILEIO, timer_elapsed());
+        writeData();
     }
 
     output_grains(lsp);
     grainShutdown();
 
-    if (rank > 0)
-    {
-        clearSubblocks();
-    }
+    clearSubblocks();
 
     timing(COMPUTATION, timer_elapsed());
 
     closeIO();
     timing(FILEIO, timer_elapsed());
 
-    if (rank == 0)
+    if (iproc == 0)
     {
         printf("\nSimulation complete.  Shutting down.\n");
     }
