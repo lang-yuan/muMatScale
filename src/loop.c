@@ -19,6 +19,7 @@
 #include "growth.h"
 
 #include <time.h>
+#include <omp.h>
 
 extern SB_struct *lsp;
 
@@ -115,8 +116,6 @@ cache_io_data()
 void
 writeData(int timestep)
 {
-    cache_io_data();
-
     // Write out the visualization files for each subblock
     if (iproc == 0)
         writeMain(timestep);
@@ -165,7 +164,6 @@ checkDone(const double fs)
         }
     }
     MPI_Bcast(&done, 1, MPI_INT, 0, mpi_comm_new);
-
     return done;
 }
 
@@ -173,9 +171,10 @@ double
 computeFS()
 {
     double gsolid_volume = solid_volume(lsp);
-    double svol;
+    double svol = -1.;
     MPI_Reduce(&gsolid_volume, &svol, 1, MPI_DOUBLE,
-                MPI_SUM, 0, mpi_comm_new);
+               MPI_SUM, 0, mpi_comm_new);
+
     profile(REDUCE_FS);
 
     return svol / totalNonMoldVolume();
@@ -196,9 +195,12 @@ loop(
     }
     timing(COMPUTATION, timer_elapsed());
 
+    int write_step = 0;
     if (bp->data_write_freq > 0 && !restart)
     {
+        cache_io_data();
         writeData(bp->timestep);
+        write_step = bp->timestep;
     }
 
     if (bp->screenpfreq > 0 && iproc == 0)
@@ -209,49 +211,75 @@ loop(
 
     int done = 0;
     double fs = 0.;
+    int io_time_step = bp->timestep;
 
+#pragma omp parallel shared(done,fs,io_time_step,write_step)
+{
+    #pragma omp single
     while (!done)
     {
-        // Read in the temperature profile
-        // Activate subblocks if necessary based on temperature
-        // Assign subblocks to processors
-        // Send out neighbor lists
+        //printf("bp->timestep = %d\n",bp->timestep);
         if (iproc == 0)
             dwrite(DEBUG_MAIN_CTRL,
                    "-------------------------------------------------\n");
-
-        // Advance to computing the next timestep
-        bp->timestep++;
-
-        //printf("One step...\n");
-        doiteration();
-
-        if (bp->screenpfreq > 0 && bp->timestep % bp->screenpfreq == 0)
+        if (bp->timestep >= bp->data_write_start)
+        if (bp->data_write_freq > 0)
+        if (bp->timestep % bp->data_write_freq == 0)
         {
-            fs = computeFS();
-
-            if( iproc == 0)
-                outputscreen(gStartTime,fs);
+            //printf("cache_io_data...\n");
+            cache_io_data();
+            io_time_step = bp->timestep;
         }
 
-        if (bp->timestep >= bp->data_write_start)
-            if (bp->data_write_freq > 0
-                && bp->timestep % bp->data_write_freq == 0)
+        // compute task
+        #pragma omp task
+        {
+            //printf("thread % d compute...\n",omp_get_thread_num());
+            for(int i = 0; i<bp->screenpfreq;i++)
             {
-                writeData(bp->timestep);
-            }
+                // Advance to computing the next timestep
+                bp->timestep++;
 
-        if (bp->checkpointfreq > 0 && bp->timestep % bp->checkpointfreq == 0)
+                doiteration();
+            }
+        }
+
+        // IO task
+        // Warning: may involve some collective MPI calls that may interfere
+        //          with MPI calls from other threads
+        #pragma omp task
+        if (io_time_step>write_step)
+        {
+            //printf("thread %d writeData...\n",omp_get_thread_num());
+            writeData(io_time_step);
+            write_step = io_time_step;
+        }
+
+        #pragma omp taskwait
+
+        if (bp->checkpointfreq > 0 )
+        if (bp->timestep % bp->checkpointfreq == 0)
         {
             writeCheckpoint();
         }
 
-        done = checkDone(fs);
+        // check for termination should be done by one thread only
+        {
+            fs = computeFS();
+            if( iproc == 0)
+                outputscreen(gStartTime,fs);
+
+            //rintf("thread %d, fs = %le\n", omp_get_thread_num(), fs);
+            done = checkDone(fs);
+        }
     }                           // end of simulation main loop
 
+} // end omp parallel
+
     // Output final solution (only if we haven't already)
-    if (bp->data_write_freq > 0 && !(bp->timestep % bp->data_write_freq == 0))
+    if (bp->data_write_freq > 0 && bp->timestep > write_step)
     {
+        cache_io_data();
         writeData(bp->timestep);
     }
 
