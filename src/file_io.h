@@ -31,7 +31,7 @@ void prepareIO(
  * Writes out any data that the Main needs to write
  */
 void writeMain(
-    );
+    int timestep);
 
 /**
  * Prepares the IO subsystem for a new Subblock
@@ -43,7 +43,7 @@ void prepareIOSubblock(
  * Writes out any data that the Tasks need to write for their subblocks
  */
 void writeSubblocks(
-    );
+    int timestep);
 
 /**
  * Finialize any IO for the simulation.
