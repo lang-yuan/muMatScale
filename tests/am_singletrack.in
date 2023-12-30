@@ -79,7 +79,7 @@ Coef_Iso2     0    			/* time dependent coef.*/
 CoolingRate   0.1            /*cooling rate for isothermal conditon, only work if Gradient == 0*/
 
 # Output
-ScreenPFreq 10				/* Frequency to write output to screen */
+ScreenPFreq 100				/* Frequency to write output to screen */
 DataFormat XDMF     			/* Output data format: NONE XDMF*/
 DataWriteFreq 200			/* Frequency to write output to files */
 #DataWriteStart 100			/* Steps start to write file */
