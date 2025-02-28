@@ -206,7 +206,7 @@ main(
 
     //MPI_Cart_coords not used for now (not compatible with other parts of code)
     int coords[3];
-    MPI_Cart_coords(mpi_comm_new, iproc, nproc, coords);
+    MPI_Cart_coords(mpi_comm_new, iproc, 3, coords);
     if(nproc<20)
         printf("My MPI rank is %d, MPI coords are %d,%d,%d \n",
                iproc, coords[2], coords[1], coords[0]);

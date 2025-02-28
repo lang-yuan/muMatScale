@@ -36,7 +36,7 @@ get_msubblock_path(
 {
     static char path[PATH_MAX] = { 0 };
     int coords[3];
-    MPI_Cart_coords(mpi_comm_new, itask, nproc, coords);
+    MPI_Cart_coords(mpi_comm_new, itask, 3, coords);
     snprintf(path, PATH_MAX - 1, "/SubBlock_%dx%dx%d/%s",
              coords[2], coords[1], coords[0], var);
     return path;
@@ -49,7 +49,7 @@ get_subblock_path(
 {
     static char path[PATH_MAX] = { 0 };
     int coords[3];
-    MPI_Cart_coords(mpi_comm_new, iproc, nproc, coords);
+    MPI_Cart_coords(mpi_comm_new, iproc, 3, coords);
     snprintf(path, PATH_MAX - 1, "/SubBlock_%dx%dx%d/%s",
              coords[2], coords[1], coords[0], var);
     return path;
@@ -154,7 +154,8 @@ writeXDMFGrids(
     for (uint32_t i = 0; i < num_sb; i++)
     {
         int coords[3];
-        MPI_Cart_coords(mpi_comm_new, i, num_sb, coords);
+        //MPI_Cart_coords(mpi_comm_new, i, num_sb, coords);
+	MPI_Cart_coords(mpi_comm_new, i, 3, coords);
 
         fprintf(fp, "%s\t<Grid Name=\"SubBlock %dx%dx%d (%d)\" "
                 "GridType=\"Uniform\">\n",
