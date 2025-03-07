@@ -27,6 +27,9 @@ Adrian Sabau, Oak Ridge National Laboratory, Email: sabaua@ornl.gov
 
 The OpenMP offload implementation for GPU is described in:
 
+L. Yuan, J.-L. Fattebert, C. Sun, A. S. Sabau,
+"Uncovering grain and subgrain microstructure at the scale of additive manufacturing melt tracks with a scalable cellular automaton solidification model", Additive Manufacturing, 92 (2024), 104401. https://doi.org/10.1016/J.ADDMA.2024.104401
+
 A.S. Sabau, L. Yuan, J.-L. Fattebert, J.A. Turner,
 "An OpenMP GPU-offload implementation of a non-equilibrium solidification
 cellular automata model for additive manufacturing",
