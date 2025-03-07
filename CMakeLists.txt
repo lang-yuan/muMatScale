@@ -53,7 +53,7 @@ add_executable(muMatScale ${src})
 
 set_property(TARGET muMatScale PROPERTY C_STANDARD 99)
 
-target_link_libraries(muMatScale PRIVATE hdf5::hdf5)
+target_link_libraries(muMatScale PRIVATE ${HDF5_LIBRARIES})
 target_link_libraries(muMatScale PRIVATE MPI::MPI_C)
 target_link_libraries(muMatScale PRIVATE ZLIB::ZLIB)
 target_link_libraries(muMatScale PRIVATE OpenMP::OpenMP_C)
