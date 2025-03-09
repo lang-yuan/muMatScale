@@ -13,9 +13,9 @@
 void xdmf_prepareIO(
     void);
 void xdmf_writeMain(
-    );
+    int timestep);
 void xdmf_writeSubblocks(
-    );
+    int timestep);
 void xdmf_closeIO(
     void);
 
