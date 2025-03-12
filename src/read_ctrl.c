@@ -43,6 +43,7 @@ set_defaults(
     bp->temp_pure = 0.0f;
     bp->pc_material_group = -1.0;
     bp->pc_region = 0;
+    bp->courant_limit = 0.2;
     //ADD_CURV_LY
     bp->tip_curv = 0;
     bp->gibbs_coef = 0.0;
@@ -276,6 +277,11 @@ read_config(
         else if (strcasecmp(token, "CellSize") == 0)
         {
             c = sscanf(lp, "%lf", &bp->cellSize);
+            assert(c == 1);
+        }
+        else if (strcasecmp(token, "CourantLimit") == 0)
+        {
+            c = sscanf(lp, "%lf", &bp->courant_limit);
             assert(c == 1);
         }
         else if (strcasecmp(token, "FaceCtrl") == 0)

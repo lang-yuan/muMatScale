@@ -40,7 +40,7 @@ sb_diffuse_alloy_decentered(
     double rl = (bp->Dliq * dtx);
 
     /* check courant stability */
-    if (rs > COURANT_LIMIT || rl > COURANT_LIMIT)
+    if (rs > bp->courant_limit || rl > bp->courant_limit)
     {
         fprintf(stderr, "Courant Criterion: Solid: , %1.2e, Liquid: %1.2e\n",
                 rs, rl);
@@ -172,7 +172,7 @@ sb_diffuse_alloy_decentered(
                 //Update the final ce value
 
                 ce[idx] += nbsum;
-
+		if(ce[idx] < 0) error("\n ** Instability by Courant criterion, lower calculation time step: %g \n!", bp->ts_delt);
             }
         }
     }

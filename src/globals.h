@@ -279,6 +279,7 @@ typedef struct bbstruct
     int padBndyX, padBndyY, padBndyZ;   // 1 = Pad, 0 = wrap
     double origin_offset[3];    // In meters, offset from 0,0,0 to minx, miny, minz of the array
     double cellSize;
+    double courant_limit ; 	//Courant Limit for diffusion stability
 
     unsigned int base_random_seed;
 
