@@ -172,7 +172,9 @@ sb_diffuse_alloy_decentered(
                 //Update the final ce value
 
                 ce[idx] += nbsum;
+#ifndef GPU_OMP
 		if(ce[idx] < 0) error("\n ** Instability by Courant criterion, lower calculation time step: %g \n!", bp->ts_delt);
+#endif
             }
         }
     }
