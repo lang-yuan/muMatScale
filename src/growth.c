@@ -718,7 +718,7 @@ capture_octahedra_diffuse(
     double* d = lsp->d;
     decentered_t* dc = lsp->dc;
     int *gr = lsp->gr;
-
+    int8_t *mold = lsp->mold;
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;

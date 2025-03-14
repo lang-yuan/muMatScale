@@ -9,7 +9,7 @@ cmake ..
 
 Build for GPU on Summit at OLCF:
 -------------------------------
-cmake -DCMAKE_C_COMPILER=mpicc -DBUILD_FOR_GPU=yes \
+cmake -DCMAKE_C_COMPILER=mpicc -DBUILD_FOR_GPU=yes -DBUILD_INDEX_SEP=yes \
       -DMPIEXEC_EXECUTABLE="/sw/summit/xalt/1.2.1/bin/jsrun" \
       -DMPIEXEC_NUMPROC_FLAG="-n" \
       -DMPIEXEC_PREFLAGS="-a1;-c7;-bpacked:2;-g1" \

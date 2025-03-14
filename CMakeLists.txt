@@ -61,7 +61,10 @@ target_link_libraries(muMatScale PRIVATE m)
 
 target_include_directories(muMatScale PRIVATE ${HDF5_INCLUDE_DIRS})
 
-target_compile_definitions(muMatScale PRIVATE INDEX_SEP)
+set(BUILD_INDEX_SEP TRUE CACHE BOOL "Whether to define INDEX_SEP flag")
+if(${BUILD_INDEX_SEP})
+	target_compile_definitions(muMatScale PRIVATE INDEX_SEP)
+endif()
 target_compile_definitions(muMatScale PRIVATE NUC_SEP)
 target_compile_definitions(muMatScale PRIVATE EBUG=0)
 
@@ -86,6 +89,6 @@ endif()
 
 enable_testing()
 
-#add_subdirectory(tests)
+add_subdirectory(tests)
 
 install(TARGETS muMatScale DESTINATION bin)
