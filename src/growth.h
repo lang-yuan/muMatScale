@@ -22,9 +22,6 @@ void grow_octahedra(
 void grow_cell_reduction(
     SB_struct * lsp,
     void * __attribute__ ((__unused__)) __unused);
-void pre_cell_reduction(
-    SB_struct * lsp,
-    void * __attribute__ ((__unused__)) __unused);
 
 double solid_volume(
     SB_struct * lsp);
