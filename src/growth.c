@@ -51,22 +51,10 @@ sb_diffuse_alloy_decentered(
 
     int totaldim = (dimx + 2) * (dimy + 2) * (dimz + 2);
 
-// copy ce into oce before updating ce
-    double *oce = lsp->oce;
-    double *ce = lsp->ce;
-#ifdef GPU_OMP
-#pragma omp target teams distribute parallel for
-    for (int idx = 0; idx < totaldim; idx++)
-    {
-        oce[idx] = ce[idx];
-    }
-#else
-    memcpy(oce, ce, totaldim * sizeof(double));
-#endif
-
     int8_t *mold = lsp->mold;
     double* fs = lsp->fs;
     double* cl = lsp->cl;
+    double *ce = lsp->ce;
 #ifdef GPU_OMP
 #pragma omp target teams distribute
 #endif
