@@ -610,11 +610,12 @@ capture_octahedra_diffuse(
     };
     const int nn_num = 6;
 
+    int totaldim = (dimx + 2) * (dimy + 2) * (dimz + 2);
+
 //General random number locally
 #ifdef RAND_LOCAL
     double *randnum;
     allocate_float(&randnum);
-    int totaldim = (dimx + 2) * (dimy + 2) * (dimz + 2);
     for (int i = 0; i <= totaldim; i++)
     {
         randnum[i] = (float) rand() / (float) RAND_MAX;
@@ -625,6 +626,17 @@ capture_octahedra_diffuse(
     int *ogr = lsp->ogr;
     double *cl = lsp->cl;
     double *fs = lsp->fs;
+
+// save current gr field into a temporary ogr
+// to be used only in that function
+#if defined(GPU_OMP)
+#pragma omp target teams distribute parallel for schedule(static, 1)
+#endif
+    for (int i = 0; i < totaldim; i++)
+    {
+        ogr[i] = gr[i];
+    }
+
 #ifdef INDEX_SEP
 
     int gindex = lsp->gindex;
