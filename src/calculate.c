@@ -333,16 +333,6 @@ doiteration(
         }
 #endif
 
-        int *ogr = lsp->ogr;
-        int *gr = lsp->gr;
-#if defined(GPU_OMP)
-#pragma omp target teams distribute parallel for schedule(static, 1)
-#endif
-        for (int i = 0; i < totaldim; i++)
-        {
-            ogr[i] = gr[i];
-        }
-
         // Uses No Halo: mold, fs, cl, ce, diff_id
         // Uses w/ Halo: ogr, dc, d
         // Produces: gr, dc, fs, cl
