@@ -225,6 +225,8 @@ doiteration(
     }
 
     {
+        int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
+
         // start communication for cl
         {
             ExchangeFacesForVar(cl_var, lsp->cl);
@@ -260,6 +262,21 @@ doiteration(
         }
         {
             FinishExchangeForVar(fs_var, lsp->fs);
+        }
+
+        {
+            // copy ce into oce before updating ce
+            double *oce = lsp->oce;
+            double *ce = lsp->ce;
+#ifdef GPU_OMP
+#pragma omp target teams distribute parallel for
+            for (int idx = 0; idx < totaldim; idx++)
+            {
+                oce[idx] = ce[idx];
+            }
+#else
+            memcpy(oce, ce, totaldim * sizeof(double));
+#endif
         }
 
         // Uses No Halo: ce
@@ -316,7 +333,6 @@ doiteration(
         }
 #endif
 
-        int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
         int *ogr = lsp->ogr;
         int *gr = lsp->gr;
 #if defined(GPU_OMP)
