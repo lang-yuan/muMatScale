@@ -313,16 +313,9 @@ doiteration(
             ExchangeFacesForVar(d_var, lsp->d);
         }
 
-        // finish communications for dc
-        {
-            FinishExchangeForVar(dc_var, lsp->dc);
-        }
+        // finish communications for gr
         {
             FinishExchangeForVar(grain_var, lsp->gr);
-        }
-        // finish communications for d
-        {
-            FinishExchangeForVar(d_var, lsp->d);
         }
 
 #ifdef INDEX_SEP
@@ -332,6 +325,16 @@ doiteration(
             profile(CALC_CELL_INDEX);
         }
 #endif
+
+        // finish communications for dc
+        {
+            FinishExchangeForVar(dc_var, lsp->dc);
+        }
+
+        // finish communications for d
+        {
+            FinishExchangeForVar(d_var, lsp->d);
+        }
 
         // Uses No Halo: mold, fs, cl, ce, diff_id
         // Uses w/ Halo: ogr, dc, d
