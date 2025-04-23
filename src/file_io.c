@@ -20,13 +20,13 @@ struct io_switch
     void);
     void (
     *writeMain) (
-    void);
+    int);
     void (
     *prepareIOSubblock) (
     SB_struct * sb);
     void (
     *writeSubblocks) (
-    void);
+    int);
     void (
     *closeIO) (
     void);
@@ -71,10 +71,10 @@ prepareIO(
  */
 void
 writeMain(
-    )
+    int timestep)
 {
     if (g_format_types[bp->vis_format].writeMain != NULL)
-        g_format_types[bp->vis_format].writeMain();
+        g_format_types[bp->vis_format].writeMain(timestep);
 }
 
 
@@ -95,12 +95,12 @@ prepareIOSubblock(
  */
 void
 writeSubblocks(
-    )
+    int timestep)
 {
     tempUpdate(true);           // make sure temperature is up to date for ALL subblocks
 
     if (g_format_types[bp->vis_format].writeSubblocks != NULL)
-        g_format_types[bp->vis_format].writeSubblocks();
+        g_format_types[bp->vis_format].writeSubblocks(timestep);
 }
 
 /**
