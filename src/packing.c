@@ -141,7 +141,7 @@ unpack_double(
 
     profile(PACKING_CPU_GPU);
 
-#pragma omp target teams distribute parallel for simd collapse(2)
+#pragma omp target teams distribute parallel for simd collapse(2) nowait
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
@@ -164,7 +164,7 @@ unpack_int(
 
     profile(PACKING_CPU_GPU);
 
-#pragma omp target teams distribute parallel for simd collapse(2)
+#pragma omp target teams distribute parallel for simd collapse(2) nowait
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize; j++)
@@ -191,7 +191,7 @@ unpack_3double(
 
     profile(PACKING_CPU_GPU);
 
-#pragma omp target teams distribute parallel for simd collapse(2)
+#pragma omp target teams distribute parallel for simd collapse(2) nowait
 #endif
     for (int i = 0; i < nblocks; i++)
         for (int j = 0; j < bsize3; j++)

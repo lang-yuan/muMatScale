@@ -98,7 +98,7 @@ FinishExchangeForVar(
             unpack_plane(data, v->datasize, face, v->rbuf);
         }
       }
-
+#pragma omp barrier
 }
 
 static void
