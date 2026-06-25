@@ -870,7 +870,7 @@ activateNewGrains(
         if (!warned && (iproc == 0))
         {
             printf
-                ("\nReached Maximum Total Grains (%lu), num_gr (%lu), new_act(%lu).  No more nucleations allowed.\n",
+                ("\nReached Maximum Total Grains (%lu), num_gr (%d), new_act(%d).  No more nucleations allowed.\n",
                  bp->maxTotalGrains, bp->num_grains, new_activations);
             warned = 1;
         }
