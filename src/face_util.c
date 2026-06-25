@@ -49,6 +49,27 @@ createCommTypes(
 	 ((data_key)<<(TAG_FACE_SHIFT)) | \
 	 (face))
 
+static int
+use_direct_device_plane(
+    const int face)
+{
+#ifdef GPU_PACK
+    return face_is_contiguous_plane(face);
+#else
+    (void)face;
+    return 0;
+#endif
+}
+
+static void *
+field_plane_ptr(
+    void *data,
+    const size_t datasize,
+    const int offset)
+{
+    return (void *) ((char *) data + (size_t) offset * datasize);
+}
+
 /**
  * Receives halo information
  *
@@ -78,23 +99,31 @@ Recv_Plane(
     int nblocks;
     int err = 0;
 
-    computeHaloInfo(halo, &offset, &stride, &bsize, &nblocks);
-    //fprintf(stderr, "Entering data region for receive\n\n\n\n");
-    void *temp = rbuffer[halo];
-
+    int sizeb = bsize * nblocks * datasize;
+#ifdef GPU_PACK
+    if (use_direct_device_plane(halo))
+    {
+        void *dev_data = data;
+#pragma omp target data use_device_ptr(dev_data)
+        {
+            void *temp = field_plane_ptr(dev_data, datasize, offset);
+            err = MPI_Irecv(temp, sizeb, MPI_BYTE, from, tag, mpi_comm_new,
+                            req);
+        }
+    }
+    else
+#endif
+    {
+        void *temp = rbuffer[halo];
 #ifdef GPU_PACK
 #ifndef CPU_MPI
 #pragma omp target data use_device_ptr(temp)
 #endif
 #endif
-    {
-      //void *temp = omp_get_mapped_ptr(rbuffer[halo], omp_get_default_device());
-      //printf("Values of	bsize:%d , nblocks:%d, datasize:%d, temp: %p,rbuffer[halo]:%p, from:%d, tag:%d, req:%p\n\n", bsize,nblocks,datasize, temp, rbuffer[halo], from,tag,req);   
-
-      int sizeb = bsize * nblocks * datasize;
-
-      err =  MPI_Irecv(temp, sizeb, MPI_BYTE, from, tag, mpi_comm_new,
-                     req);
+        {
+            err = MPI_Irecv(temp, sizeb, MPI_BYTE, from, tag, mpi_comm_new,
+                            req);
+        }
     }
 
     if (err != MPI_SUCCESS) 
@@ -193,7 +222,8 @@ Send_Plane(
     void *sbuffer[6],
     MPI_Request * req)
 {
-    assert(sbuffer[face] != NULL);
+    if (!use_direct_device_plane(face))
+        assert(sbuffer[face] != NULL);
     int offset;
     int stride;
     int bsize;
@@ -201,26 +231,34 @@ Send_Plane(
     int err = 0;
 
     computeFaceInfo(face, &offset, &stride, &bsize, &nblocks);
-    pack_field(datasize, data, stride, bsize, nblocks, offset, sbuffer[face]);
-    int sizeb = bsize * nblocks * datasize;
 
-    void *temp = sbuffer[face];
+    int sizeb = bsize * nblocks * datasize;
+#ifdef GPU_PACK
+    if (use_direct_device_plane(face))
+    {
+        void *dev_data = data;
+#pragma omp target data use_device_ptr(dev_data)
+        {
+            void *temp = field_plane_ptr(dev_data, datasize, offset);
+            err = MPI_Isend(temp, sizeb, MPI_BYTE, to, tag, mpi_comm_new,
+                            req);
+        }
+    }
+    else
+#endif
+    {
+        void *temp = sbuffer[face];
 #ifdef GPU_PACK
 #ifndef CPU_MPI
 #pragma omp target data use_device_ptr(temp)
 #endif
 #endif
-    {
-
-      //fprintf(stderr, "Entering data region for send\n\n\n\n");
-      err = MPI_Isend(temp, sizeb, MPI_BYTE, to, tag, mpi_comm_new,req);
-
-
-      if (err != MPI_SUCCESS)
-        fprintf(stderr, "Error: MPI_Isend failed with error code %d\n", err);
+        {
+            err = MPI_Isend(temp, sizeb, MPI_BYTE, to, tag, mpi_comm_new,
+                            req);
+        }
     }
     return err;
-
 }
 
 /**
@@ -241,10 +279,39 @@ SendFacesNB(
     size_t datasize,
     int connMap[][2],
     void *sbuf[6],
+    int buffer_slot_cells,
     MPI_Request * reqs)
 {
     int n_req = 0;
     int err = 0;
+    int faces[NUM_NEIGHBORS];
+    int offsets[NUM_NEIGHBORS];
+    int strides[NUM_NEIGHBORS];
+    int bsizes[NUM_NEIGHBORS];
+    int nblocks[NUM_NEIGHBORS];
+    int face_count = 0;
+
+    for (int face = 0; face < NUM_NEIGHBORS; face++)
+    {
+        int rank = connMap[face][0];
+        if (rank >= 0 && rank != iproc)
+        {
+#ifdef GPU_PACK
+            if (use_direct_device_plane(face))
+                continue;
+#endif
+            faces[face_count] = face;
+            computeFaceInfo(face, &offsets[face_count], &strides[face_count],
+                            &bsizes[face_count], &nblocks[face_count]);
+            face_count++;
+        }
+    }
+
+    if (face_count > 0)
+    {
+        pack_faces_field(datasize, data, face_count, faces, strides, bsizes,
+                         nblocks, offsets, buffer_slot_cells, sbuf[0]);
+    }
 
     for (int face = 0; face < NUM_NEIGHBORS; face++)
     {
@@ -290,11 +357,13 @@ SendRecvHalosNB(
     int connMap[][2],
     void *sbuf[6],
     void *rbuf[6],
+    int buffer_slot_cells,
     MPI_Request * reqs)
 {
     int n_req = 0;
     n_req += RecvHalosNB(data, data_key, datasize, connMap, rbuf, &reqs[0]);
-    n_req += SendFacesNB(data, data_key, datasize, connMap, sbuf, &reqs[n_req]);
+    n_req += SendFacesNB(data, data_key, datasize, connMap, sbuf,
+                         buffer_slot_cells, &reqs[n_req]);
 
     return n_req;
 }

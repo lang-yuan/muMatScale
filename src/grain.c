@@ -350,10 +350,7 @@ createGrains(
     size_t base_gr_num)
 {
 #ifdef GPU_OMP
-    // copy gr to CPU since grains are created there
     int* gr = lsp->gr;
-#pragma omp target update from(gr[0:lsp->totaldim])
-    profile(OFFLOADING_GPU_CPU);
 #endif
 
     for (size_t g = 0; g < count; g++)
@@ -418,9 +415,27 @@ createGrains(
     }
 
 #ifdef GPU_OMP
-    // gr has changed and needs to be updated on GPU
-#pragma omp target update to(gr[0:lsp->totaldim])
-    profile(OFFLOADING_CPU_GPU);
+    if (count > 0)
+    {
+        const int dimx = bp->gsdimx;
+        const int dimy = bp->gsdimy;
+        const int dimz = bp->gsdimz;
+#pragma omp target teams distribute parallel for map(to:newGrainLocs[0:count]) schedule(static,1)
+        for (size_t g = 0; g < count; g++)
+        {
+            int gr_num = (int) (base_gr_num + g);
+            int z = newGrainLocs[g].z;
+            int x = newGrainLocs[g].x;
+            int y = newGrainLocs[g].y;
+
+            int sx = 1 + (x % dimx);
+            int sy = 1 + (y % dimy);
+            int sz = 1 + (z % dimz);
+            int idx = sx + sy * (dimx + 2) + sz * (dimx + 2) * (dimy + 2);
+
+            gr[idx] = gr_num;
+        }
+    }
 #endif
 }
 
@@ -1076,14 +1091,10 @@ cell_nucleation(
     float *nuc_threshold = sb->nuc_threshold;
     int *lsindex = sb->lsindex;
 #ifdef GPU_OMP_NUC
-#pragma omp target map(from:numNewGrains)
-#pragma omp teams distribute
+#pragma omp target teams distribute parallel for collapse(3) map(from:numNewGrains) schedule(static,1)
 #endif
     for (int k = 1; k <= dimz; k++)
     {
-#ifdef GPU_OMP_NUC
-#pragma omp parallel for collapse(2) schedule(static,1)
-#endif
         for (int j = 1; j <= dimy; j++)
         {
             for (int i = 1; i <= dimx; i++)
@@ -1111,7 +1122,7 @@ cell_nucleation(
                         initnuc = 0;
                 }
 
-                if ((!sb->mold[idx]) && (gr[idx] <= 0) && lyaerno
+                if ((!sb->mold[idx]) && (gr[idx] <= 0) && layerno
                     && initnuc)
                     // Liquid, and a nuc site!
                 {
@@ -1156,15 +1167,10 @@ cell_nucleation(
 #ifndef NUC_PRELIST
 
 #ifdef GPU_OMP_NUC
-#pragma omp target map(tofrom:nindex)
-#pragma omp teams distribute
+#pragma omp target teams distribute parallel for collapse(3) map(tofrom:nindex) schedule(static,1)
 #endif
     for (int k = 1; k <= dimz; k++)
     {
-#ifdef GPU_OMP_NUC
-#pragma omp parallel for collapse(2) schedule(static,1)
-#endif
-
         for (int j = 1; j <= dimy; j++)
         {
             for (int i = 1; i <= dimx; i++)
@@ -1224,14 +1230,10 @@ cell_nucleation(
     int *nuc_id2 = sb->nuc_id2;
     int *lsindex = sb->lsindex;
 #ifdef GPU_OMP_NUC
-#pragma omp target map(tofrom:nindex2)
-#pragma omp teams distribute
+#pragma omp target teams distribute parallel for collapse(3) map(tofrom:nindex2) schedule(static,1)
 #endif
     for (int k = 1; k <= dimz; k++)
     {
-#ifdef GPU_OMP_NUC
-#pragma omp parallel for collapse(2) schedule(static,1)
-#endif
         for (int j = 1; j <= dimy; j++)
         {
             for (int i = 1; i <= dimx; i++)
@@ -1321,6 +1323,11 @@ cell_nucleation(
     profile(CALC_NUCLEATION);
 
 #ifdef GPU_OMP_NUC
-#pragma omp target update from(newGrainLocs[0:numGrainPerSub])
+    int grains_to_copy = numNewGrains > (size_t) numGrainPerSub
+        ? numGrainPerSub : (int) numNewGrains;
+    if (grains_to_copy > 0)
+    {
+#pragma omp target update from(newGrainLocs[0:grains_to_copy])
+    }
 #endif
 }

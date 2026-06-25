@@ -6,6 +6,7 @@
 /***************************************************************/
 
 #include <mpi.h>
+#include <inttypes.h>
 #include "debug.h"
 #include "xmalloc.h"
 #include "profiler.h"
@@ -34,8 +35,8 @@ static char *bucket_names[] = {
     "Offloading CPU-GPU",
     "Offloading GPU-CPU",
     "Offloading IO",
-    "Packing CPU-GPU",
-    "Packing GPU-CPU",
+    "Unpack staging kernel",
+    "Pack staging kernel",
     "Reduce fs",
     "unPacking",
     "Packing",
@@ -112,7 +113,7 @@ profiler_collate(
     if (iproc == 0)
     {
         char profiler_file[PATH_MAX] = { 0 };
-        snprintf(profiler_file, PATH_MAX - 1, "%s_profile_%lu.csv",
+        snprintf(profiler_file, PATH_MAX - 1, "%s_profile_%" PRIu64 ".csv",
                  bp->basefilename, bp->timestep);
         FILE *fp = fopen(profiler_file, "w");
 

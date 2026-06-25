@@ -195,6 +195,11 @@ allocateFields(
 #pragma omp target enter data map(to:cl[0:totaldim]) nowait
     decentered_t* dc = lsp->dc;
 #pragma omp target enter data map(to:dc[0:totaldim]) nowait
+    if (bp->tip_curv == 1)
+    {
+        double *curv = lsp->curv;
+#pragma omp target enter data map(to:curv[0:totaldim]) nowait
+    }
 
 #ifdef GPU_OMP_NUC
     float *nuc_threshold = lsp->nuc_threshold;

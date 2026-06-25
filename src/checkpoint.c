@@ -30,6 +30,76 @@ extern ll_t *gsubblock_list;
 extern SB_struct *lsp;
 tasks_t gtasks;
 
+#ifdef GPU_OMP
+static void
+syncCheckpointFieldsFromDevice(
+    SB_struct * sb)
+{
+    int totaldim = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
+
+    if (sb->temperature)
+    {
+        double *temperature = sb->temperature;
+#pragma omp target update from(temperature[0:totaldim])
+    }
+    if (sb->gr)
+    {
+        int *gr = sb->gr;
+#pragma omp target update from(gr[0:totaldim])
+    }
+    if (sb->fs)
+    {
+        double *fs = sb->fs;
+#pragma omp target update from(fs[0:totaldim])
+    }
+    if (sb->ce)
+    {
+        double *ce = sb->ce;
+#pragma omp target update from(ce[0:totaldim])
+    }
+    if (sb->oce)
+    {
+        double *oce = sb->oce;
+#pragma omp target update from(oce[0:totaldim])
+    }
+    if (sb->cl)
+    {
+        double *cl = sb->cl;
+#pragma omp target update from(cl[0:totaldim])
+    }
+    if (sb->diff_id)
+    {
+        int *diff_id = sb->diff_id;
+#pragma omp target update from(diff_id[0:totaldim])
+    }
+    if (sb->mold)
+    {
+        int8_t *mold = sb->mold;
+#pragma omp target update from(mold[0:totaldim])
+    }
+    if (sb->d)
+    {
+        double *d = sb->d;
+#pragma omp target update from(d[0:totaldim])
+    }
+    if (sb->nuc_threshold)
+    {
+        float *nuc_threshold = sb->nuc_threshold;
+#pragma omp target update from(nuc_threshold[0:totaldim])
+    }
+    if (sb->dc)
+    {
+        decentered_t *dc = sb->dc;
+#pragma omp target update from(dc[0:totaldim])
+    }
+    if (sb->curv)
+    {
+        double *curv = sb->curv;
+#pragma omp target update from(curv[0:totaldim])
+    }
+}
+#endif
+
 static const char *
 add_subblock(
     SB_struct * sb)
@@ -1127,6 +1197,10 @@ writeTaskCheckpoint(
 
     {
         SB_struct *sb = lsp;
+
+#ifdef GPU_OMP
+        syncCheckpointFieldsFromDevice(sb);
+#endif
 
         hid_t subgroup =
             H5Gcreate(subblock, add_subblock(sb), H5P_DEFAULT, gcpl,

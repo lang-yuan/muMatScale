@@ -13,9 +13,10 @@ target_link_libraries(testPacking PRIVATE m)
 if(${BUILD_FOR_GPU})
   target_compile_definitions(testPacking PRIVATE GPU_PACK)
   target_link_libraries(testPacking PRIVATE OpenMP::OpenMP_C)
-  #set_target_properties(testPacking PROPERTIES COMPILE_FLAGS ${EXTRA_OpenMP_C_FLAGS})
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_OpenMP_C_FLAGS}")
-  target_link_libraries(testPacking PRIVATE ${EXTRA_OpenMP_C_FLAGS})
+  if(EXTRA_OpenMP_C_FLAGS_LIST)
+    target_compile_options(testPacking PRIVATE ${EXTRA_OpenMP_C_FLAGS_LIST})
+    target_link_options(testPacking PRIVATE ${EXTRA_OpenMP_C_FLAGS_LIST})
+  endif()
 endif()
 
 add_test(NAME testPacking

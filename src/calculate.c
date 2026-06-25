@@ -45,6 +45,10 @@ typedef struct variable_registration
     MPI_Request *reqs;
     int nreq;
     size_t datasize;
+    char *rbuf_base;
+    char *sbuf_base;
+    int buffer_slot_cells;
+    size_t buffer_slot_bytes;
     void *rbuf[6];
     void *sbuf[6];
 } variable_registration;
@@ -63,6 +67,10 @@ registerCommInfo(
     v->reqs = NULL;
     v->nreq = 0;
     v->datasize = datasize;
+    v->rbuf_base = NULL;
+    v->sbuf_base = NULL;
+    v->buffer_slot_cells = 0;
+    v->buffer_slot_bytes = 0;
     for (int i = 0; i < 6; i++)
     {
         v->rbuf[i] = NULL;
@@ -87,17 +95,37 @@ FinishExchangeForVar(
     dwrite(DEBUG_MPI, "%d: Waitall returned\n", iproc);
     profile(FACE_EXCHNG_REMOTE_WAIT);
 
-      // unpack received data
-      SB_struct *s = lsp;
-      for (int face = 0; face < NUM_NEIGHBORS; face++)
-      {
+    // unpack received data
+    SB_struct *s = lsp;
+    int faces[NUM_NEIGHBORS];
+    int offsets[NUM_NEIGHBORS];
+    int strides[NUM_NEIGHBORS];
+    int bsizes[NUM_NEIGHBORS];
+    int nblocks[NUM_NEIGHBORS];
+    int face_count = 0;
+
+    for (int face = 0; face < NUM_NEIGHBORS; face++)
+    {
         int rank = s->neighbors[face][0];
         // A rank of less than 0 means that it isn't assigned
         if (rank >= 0 && rank != iproc)
         {
-            unpack_plane(data, v->datasize, face, v->rbuf);
+#ifdef GPU_PACK
+            if (face_is_contiguous_plane(face))
+                continue;
+#endif
+            faces[face_count] = face;
+            computeHaloInfo(face, &offsets[face_count], &strides[face_count],
+                            &bsizes[face_count], &nblocks[face_count]);
+            face_count++;
         }
-      }
+    }
+    if (face_count > 0)
+    {
+        unpack_faces_field(v->datasize, data, face_count, faces, strides,
+                           bsizes, nblocks, offsets, v->buffer_slot_cells,
+                           v->rbuf[0]);
+    }
 
 }
 
@@ -109,9 +137,6 @@ ExchangeFacesForVar(
      * each potential Recv that we might do. */
     variable_registration *v = &var_regs[variable_key];
     size_t req_len = 2 * NUM_NEIGHBORS;
-
-    double* dbuf;
-    int* ibuf;
 
     if (v->reqs == NULL)
     {
@@ -132,37 +157,23 @@ ExchangeFacesForVar(
             n2 = nxz;
         if (nyz > n2)
             n2 = nyz;
+        v->buffer_slot_cells = n2;
+        v->buffer_slot_bytes = v->datasize * n2;
+        size_t buffer_bytes = NUM_NEIGHBORS * v->buffer_slot_bytes;
+        xmalloc(v->rbuf_base, char, buffer_bytes);
+        xmalloc(v->sbuf_base, char, buffer_bytes);
+
         for (int face = 0; face < NUM_NEIGHBORS; face++)
         {
-            v->rbuf[face] = malloc(v->datasize * n2);
-            memset(v->rbuf[face], 1, v->datasize * n2);
-            v->sbuf[face] = malloc(v->datasize * n2);
-            memset(v->sbuf[face], 1, v->datasize * n2);
-#ifdef GPU_PACK
-switch( v->datasize)
-{
-    case 8:
-        dbuf = (double*)v->rbuf[face];
-#pragma omp target enter data map(to:dbuf[:n2])
-        dbuf = (double*)v->sbuf[face];
-#pragma omp target enter data map(to:dbuf[:n2])
-        break;
-   case 4:
-       ibuf = (int*)v->rbuf[face];
-#pragma omp target enter data map(to:ibuf[:n2])
-       ibuf = (int*)v->sbuf[face];
-#pragma omp target enter data map(to:ibuf[:n2])
-       break;
-   case 24:
-        dbuf = (double*)v->rbuf[face];
-#pragma omp target enter data map(to:dbuf[:3*n2])
-        dbuf = (double*)v->sbuf[face];
-#pragma omp target enter data map(to:dbuf[:3*n2])
-   default:
-       break;
-}
-#endif
+            v->rbuf[face] = v->rbuf_base + face * v->buffer_slot_bytes;
+            v->sbuf[face] = v->sbuf_base + face * v->buffer_slot_bytes;
         }
+#ifdef GPU_PACK
+        char *rbuf_base = v->rbuf_base;
+        char *sbuf_base = v->sbuf_base;
+#pragma omp target enter data map(alloc:rbuf_base[0:buffer_bytes])
+#pragma omp target enter data map(alloc:sbuf_base[0:buffer_bytes])
+#endif
     }
 
     timing(COMPUTATION, timer_elapsed());
@@ -177,7 +188,7 @@ switch( v->datasize)
 
         v->nreq = SendRecvHalosNB(d, variable_key, v->datasize,
                                   s->neighbors, v->sbuf, v->rbuf,
-                                  &v->reqs[0]);
+                                  v->buffer_slot_cells, &v->reqs[0]);
     }
     profile(FACE_EXCHNG_REMOTE_SEND);
     timing(COMPUTATION, timer_elapsed());
