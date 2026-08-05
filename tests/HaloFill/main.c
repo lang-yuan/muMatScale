@@ -1,3 +1,4 @@
+#include "face_util.h"
 #include "globals.h"
 #include "xmalloc.h"
 #include "read_ctrl.h"
@@ -89,8 +90,9 @@ exchange_data(
     int face,
     int halo,
     double *field,
-    double *send_buffer,
-    double *recv_buffer)
+    void *send_buffer[6],
+    void *recv_buffer[6],
+    MPI_Comm comm)
 {
     int dest = neighbors[face];
     assert(dest < nproc);
@@ -99,38 +101,19 @@ exchange_data(
     assert(src < nproc);
     assert(src >= 0);
 
-    int offset;
-    int stride;
-    int bsize;
-    int nblocks;
-    computeFaceInfo(face, &offset, &stride, &bsize, &nblocks);
+    MPI_Request req[2];
 
-    printf("pack_field...\n");
-    pack_field(sizeof(double), field, stride, bsize, nblocks, offset,
-               send_buffer);
+    printf("Send_Plane...\n");
+    Send_Plane(field, sizeof(double), face, dest, 0, send_buffer, &req[0]);
 
-    MPI_Request req;
-    void *temp1 = recv_buffer;
-    void *temp2 = send_buffer;
-#ifdef GPU_PACK
-#ifndef CPU_MPI
-#pragma omp target data use_device_ptr(temp1, temp2)
-#endif
-#endif
-    {
-      MPI_Irecv(temp1, dim2, MPI_DOUBLE, src, 0, MPI_COMM_WORLD, &req);
-      MPI_Send(temp2, dim2, MPI_DOUBLE, dest, 0, MPI_COMM_WORLD);
-      MPI_Status mpi_status;
-      MPI_Wait(&req, &mpi_status);
-    }
+    Recv_Plane(field, sizeof(double), halo, src, 0, recv_buffer, &req[1]);
+
+    MPI_Status mpi_status;
+    MPI_Waitall(2, req, MPI_STATUSES_IGNORE);
 
     // recv data in halo cells
-    computeHaloInfo(halo, &offset, &stride, &bsize, &nblocks);
-
-    printf("unpack_field...\n");
-    unpack_field(sizeof(double), field, stride, bsize, nblocks, offset,
-                 recv_buffer);
-
+    printf("unpack plane...\n");
+    unpack_plane(field, sizeof(double), halo, recv_buffer);
 }
 
 int
@@ -142,8 +125,11 @@ main(
     int ret = 0;
 
     MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
-    MPI_Comm_rank(MPI_COMM_WORLD, &iproc);
+    MPI_Comm comm = MPI_COMM_WORLD;
+    // set muMatScale communicator to test communicator
+    mpi_comm_new = comm;
+    MPI_Comm_size(comm, &nproc);
+    MPI_Comm_rank(comm, &iproc);
 
     if (iproc == 0)
         printf("Test packing functions...\n");
@@ -157,14 +143,14 @@ main(
         print_config(stdout);
     }
 
-    MPI_Bcast(bp, sizeof(BB_struct), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(bp, sizeof(BB_struct), MPI_BYTE, 0, comm);
     int dim3 = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
     if (iproc == 0)
         printf("Local array size = %d\n", dim3);
 
     profiler_init();
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(comm);
 
     double *field = malloc(dim3 * sizeof(double));
     int dimxy = (bp->gsdimx + 2) * (bp->gsdimy + 2);
@@ -174,14 +160,22 @@ main(
     // create buffers large enough
     dim2 = (dimxy > dimxz) ? dimxy : dimxz;
     dim2 = (dim2 > dimyz) ? dim2 : dimyz;
-    double *send_buffer = malloc(dim2 * sizeof(double));
-    double *recv_buffer = malloc(dim2 * sizeof(double));
+    void *send_buffer[NUM_NEIGHBORS];
+    void *recv_buffer[NUM_NEIGHBORS];
 
+    for (int face = 0; face < NUM_NEIGHBORS; face++)
+    {
+        send_buffer[face] = malloc(dim2 * sizeof(double));
+        recv_buffer[face] = malloc(dim2 * sizeof(double));
 #ifdef GPU_PACK
+        double* dbuf;
 #pragma omp target enter data map(alloc:field[:dim3])
-#pragma omp target enter data map(alloc:send_buffer[:dim2])
-#pragma omp target enter data map(alloc:recv_buffer[:dim2])
+        dbuf = (double*)send_buffer[face];
+#pragma omp target enter data map(alloc:dbuf[:dim2])
+        dbuf = (double*)recv_buffer[face];
+#pragma omp target enter data map(alloc:dbuf[:dim2])
 #endif
+    }
 
     if (iproc == 0)
         printf("Determine neighbors...\n");
@@ -190,11 +184,6 @@ main(
 
     // initialize field (no halo)
     double value = 3.33;
-
-    for (int i = 0; i < dim2; i++)
-        send_buffer[i] = 1.11;
-    for (int i = 0; i < dim2; i++)
-        recv_buffer[i] = 2.22;
 
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
@@ -211,7 +200,7 @@ main(
         int face = FACE_TOP;
         int halo = FACE_BOTTOM;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
 
         // check field with halo values
         if (iproc == 0)
@@ -229,7 +218,7 @@ main(
         int face = FACE_BOTTOM;
         int halo = FACE_TOP;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
 
         // check field with halo values
         ret +=
@@ -246,7 +235,7 @@ main(
         int face = FACE_LEFT;
         int halo = FACE_RIGHT;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
 
         // check field with halo values
         ret +=
@@ -263,7 +252,7 @@ main(
         int face = FACE_RIGHT;
         int halo = FACE_LEFT;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
 
         // check field with halo values
         ret += check_values(field, value, 0, 0, 1, bp->gsdimy, 1, bp->gsdimz);
@@ -278,7 +267,7 @@ main(
         int face = FACE_FRONT;
         int halo = FACE_BACK;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
 
         // check field with halo values
         ret =
@@ -295,19 +284,25 @@ main(
         int face = FACE_BACK;
         int halo = FACE_FRONT;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
 
         // check field with halo values
         ret = check_values(field, value, 1, bp->gsdimx, 0, 0, 1, bp->gsdimz);
     }
 
+    for (int face = 0; face < NUM_NEIGHBORS; face++)
+    {
 #ifdef GPU_PACK
+        double* dbuf;
 #pragma omp target exit data map(delete:field[:dim3])
-#pragma omp target exit data map(delete:send_buffer[:dim2])
-#pragma omp target exit data map(delete:recv_buffer[:dim2])
+        dbuf = (double*)send_buffer[face];
+#pragma omp target exit data map(delete:dbuf[:dim2])
+        dbuf = (double*)recv_buffer[face];
+#pragma omp target exit data map(delete:dbuf[:dim2])
 #endif
-    free(recv_buffer);
-    free(send_buffer);
+        free(recv_buffer[face]);
+        free(send_buffer[face]);
+    }
     free(field);
 
     MPI_Finalize();
