@@ -2,26 +2,27 @@ find_package(PythonInterp 3.2 REQUIRED)
 
 include_directories( ${CMAKE_SOURCE_DIR}/src)
 
-add_executable(testPacking ${CMAKE_SOURCE_DIR}/tests/Packing/main.c
+add_executable(testHaloFill ${CMAKE_SOURCE_DIR}/tests/HaloFill/main.c
                ${CMAKE_SOURCE_DIR}/src/globals.c
-               ${CMAKE_SOURCE_DIR}/tests/Packing/functions.c
-               ${CMAKE_SOURCE_DIR}/tests/Packing/read_ctrl.c
+               ${CMAKE_SOURCE_DIR}/src/face_util.c
+               ${CMAKE_SOURCE_DIR}/tests/HaloFill/functions.c
+               ${CMAKE_SOURCE_DIR}/tests/HaloFill/read_ctrl.c
                ${CMAKE_SOURCE_DIR}/src/profiler.c
                ${CMAKE_SOURCE_DIR}/src/stopwatch.c
                ${CMAKE_SOURCE_DIR}/src/packing.c)
-target_link_libraries(testPacking PRIVATE m)
+target_link_libraries(testHaloFill PRIVATE m)
 if(${BUILD_FOR_GPU})
-  target_compile_definitions(testPacking PRIVATE GPU_PACK)
-  target_link_libraries(testPacking PRIVATE OpenMP::OpenMP_C)
-  #set_target_properties(testPacking PROPERTIES COMPILE_FLAGS ${EXTRA_OpenMP_C_FLAGS})
+  target_compile_definitions(testHaloFill PRIVATE GPU_PACK)
+  target_link_libraries(testHaloFill PRIVATE OpenMP::OpenMP_C)
+  #set_target_properties(testHaloFill PROPERTIES COMPILE_FLAGS ${EXTRA_OpenMP_C_FLAGS})
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_OpenMP_C_FLAGS}")
-  target_link_libraries(testPacking PRIVATE ${EXTRA_OpenMP_C_FLAGS})
+  target_link_libraries(testHaloFill PRIVATE ${EXTRA_OpenMP_C_FLAGS})
 endif()
 
-add_test(NAME testPacking
+add_test(NAME testHaloFill
          COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 6 ${MPIEXEC_PREFLAGS}
-	 ${CMAKE_CURRENT_BINARY_DIR}/testPacking
-         ${CMAKE_CURRENT_SOURCE_DIR}/Packing/pack.in)
+	 ${CMAKE_CURRENT_BINARY_DIR}/testHaloFill
+         ${CMAKE_CURRENT_SOURCE_DIR}/HaloFill/pack.in)
 
 #regression tests
 add_test(NAME OneGrain

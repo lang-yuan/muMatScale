@@ -61,7 +61,7 @@ createCommTypes(
  * \param[out] req     MPI_Request to fill
  * \return MPI_SUCCESS on no error, otherwise, an error code
  */
-static int
+int
 Recv_Plane(
     void *data,
     size_t datasize,
@@ -183,7 +183,7 @@ RecvHalosNB(
  * \param[out] req    MPI_Request to fill
  * \return MPI_SUCCESS on no error, otherwise, an error code
  */
-static int
+int
 Send_Plane(
     void *data,
     size_t datasize,

@@ -71,4 +71,23 @@ void unpack_plane(
     int halo,
     void *rbuf[6]);
 
+int Send_Plane(
+    void *data,
+    size_t datasize,
+    int face,
+    int to,
+    int tag,
+    void *sbuffer[6],
+    MPI_Request * req);
+
+int
+Recv_Plane(
+    void *data,
+    size_t datasize,
+    int halo,
+    int from,
+    int tag,
+    void *rbuffer[6],
+    MPI_Request * req);
+
 #endif /* FACE_UTIL.H */
