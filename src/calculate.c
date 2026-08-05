@@ -143,21 +143,21 @@ switch( v->datasize)
 {
     case 8:
         dbuf = (double*)v->rbuf[face];
-#pragma omp target enter data map(to:dbuf[:n2])
+#pragma omp target enter data map(alloc:dbuf[:n2])
         dbuf = (double*)v->sbuf[face];
-#pragma omp target enter data map(to:dbuf[:n2])
+#pragma omp target enter data map(alloc:dbuf[:n2])
         break;
    case 4:
        ibuf = (int*)v->rbuf[face];
-#pragma omp target enter data map(to:ibuf[:n2])
+#pragma omp target enter data map(alloc:ibuf[:n2])
        ibuf = (int*)v->sbuf[face];
-#pragma omp target enter data map(to:ibuf[:n2])
+#pragma omp target enter data map(alloc:ibuf[:n2])
        break;
    case 24:
         dbuf = (double*)v->rbuf[face];
-#pragma omp target enter data map(to:dbuf[:3*n2])
+#pragma omp target enter data map(alloc:dbuf[:3*n2])
         dbuf = (double*)v->sbuf[face];
-#pragma omp target enter data map(to:dbuf[:3*n2])
+#pragma omp target enter data map(alloc:dbuf[:3*n2])
    default:
        break;
 }
