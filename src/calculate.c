@@ -45,6 +45,13 @@ typedef struct variable_registration
     MPI_Request *reqs;
     int nreq;
     size_t datasize;
+    // pointers to halo exchange buffer allocations
+    char *rbuf_base;
+    char *sbuf_base;
+    // max. number of elements in halo exchange buffer
+    int buffer_slot_cells;
+    // max. size in bytes for 6 halo exchange buffers
+    size_t buffer_slot_bytes;
     void *rbuf[6];
     void *sbuf[6];
 } variable_registration;
@@ -63,6 +70,10 @@ registerCommInfo(
     v->reqs = NULL;
     v->nreq = 0;
     v->datasize = datasize;
+    v->rbuf_base = NULL;
+    v->sbuf_base = NULL;
+    v->buffer_slot_cells = 0;
+    v->buffer_slot_bytes = 0;
     for (int i = 0; i < 6; i++)
     {
         v->rbuf[i] = NULL;
@@ -110,9 +121,6 @@ ExchangeFacesForVar(
     variable_registration *v = &var_regs[variable_key];
     size_t req_len = 2 * NUM_NEIGHBORS;
 
-    double* dbuf;
-    int* ibuf;
-
     if (v->reqs == NULL)
     {
         xrealloc(v->reqs, MPI_Request, req_len);
@@ -124,6 +132,7 @@ ExchangeFacesForVar(
         int dimy = bp->gsdimy;
         int dimz = bp->gsdimz;
 
+        // evaluate max. numbers of cells in single halo array
         int nxy = (dimx + 2) * (dimy + 2);
         int nxz = (dimx + 2) * (dimz + 2);
         int nyz = (dimy + 2) * (dimz + 2);
@@ -132,35 +141,23 @@ ExchangeFacesForVar(
             n2 = nxz;
         if (nyz > n2)
             n2 = nyz;
+
+        v->buffer_slot_cells = n2;
+        v->buffer_slot_bytes = v->datasize * n2;
+        size_t buffer_bytes = NUM_NEIGHBORS * v->buffer_slot_bytes;
+        // allocate 6 buffers as one large allocation
+        xmalloc(v->rbuf_base, char, buffer_bytes);
+        xmalloc(v->sbuf_base, char, buffer_bytes);
+
         for (int face = 0; face < NUM_NEIGHBORS; face++)
         {
-            v->rbuf[face] = malloc(v->datasize * n2);
-            memset(v->rbuf[face], 1, v->datasize * n2);
-            v->sbuf[face] = malloc(v->datasize * n2);
-            memset(v->sbuf[face], 1, v->datasize * n2);
+            v->rbuf[face] = v->rbuf_base + face * v->buffer_slot_bytes;
+            v->sbuf[face] = v->sbuf_base + face * v->buffer_slot_bytes;
 #ifdef GPU_PACK
-switch( v->datasize)
-{
-    case 8:
-        dbuf = (double*)v->rbuf[face];
-#pragma omp target enter data map(alloc:dbuf[:n2])
-        dbuf = (double*)v->sbuf[face];
-#pragma omp target enter data map(alloc:dbuf[:n2])
-        break;
-   case 4:
-       ibuf = (int*)v->rbuf[face];
-#pragma omp target enter data map(alloc:ibuf[:n2])
-       ibuf = (int*)v->sbuf[face];
-#pragma omp target enter data map(alloc:ibuf[:n2])
-       break;
-   case 24:
-        dbuf = (double*)v->rbuf[face];
-#pragma omp target enter data map(alloc:dbuf[:3*n2])
-        dbuf = (double*)v->sbuf[face];
-#pragma omp target enter data map(alloc:dbuf[:3*n2])
-   default:
-       break;
-}
+        char *rbuf_base = v->rbuf_base;
+        char *sbuf_base = v->sbuf_base;
+#pragma omp target enter data map(alloc:rbuf_base[0:buffer_bytes])
+#pragma omp target enter data map(alloc:sbuf_base[0:buffer_bytes])
 #endif
         }
     }
