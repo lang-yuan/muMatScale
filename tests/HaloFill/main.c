@@ -12,24 +12,30 @@
 int neighbors[NUM_NEIGHBORS];
 int dim2;
 
+// arbitrary, non-uniform periodic function
+double f(double x, double y, double z)
+{
+    double fx = 0.2*sin(2.*M_PI*x/(bp->gdimx*bp->cellSize));
+    double fy = 0.3*sin(2.*M_PI*y/(bp->gdimy*bp->cellSize));
+    double fz = 0.4*sin(2.*M_PI*z/(bp->gdimz*bp->cellSize));
 
+    return fx + fy +fz;
+}
+
+// check range of indices for function matching
 int
 check_values(
     double *field,
-    const double value,
-    int i0,
-    int i1,
-    int j0,
-    int j1,
-    int k0,
-    int k1)
+    const int dimx, const int dimy, const int dimz,
+    uint32_t sbx, uint32_t sby, uint32_t sbz,
+    int i0, int i1, int j0, int j1, int k0, int k1)
 {
     int ret = 0;
     // check field with halo values
     int count = 0;
     double tol = 1.e-8;
-    int dim3 = (bp->gsdimx + 2) * (bp->gsdimy + 2) * (bp->gsdimz + 2);
 
+    int dim3 = (dimx + 2) * (dimy + 2) * (dimz + 2);
 #ifdef GPU_PACK
 #pragma omp target update from(field[:dim3])
 #endif
@@ -41,12 +47,17 @@ check_values(
             for (int i = i0; i <= i1; i++)
             {
                 int idx =
-                    k * (bp->gsdimy + 2) * (bp->gsdimx + 2) +
-                    j * (bp->gsdimx + 2) + i;
+                    k * (dimy + 2) * (dimx + 2) +
+                    j * (dimx + 2) + i;
                 count++;
+
+                double rx, ry, rz;
+                scoord2realcoord(sbx, sby, sbz, i-1, j-1, k-1, &rx, &ry, &rz);
+                double value = f(rx,ry,rz);
+
                 if (fabs(field[idx] - value) > tol)
                 {
-                    printf("%d %d %d\n", i, j, k);
+                    printf("%d %d %d %le %le %le\n", i, j, k, rx, ry, rz);
                     printf
                         ("iproc = %d, Expected value: %le. Value found: %le\n",
                          iproc, value, field[idx]);
@@ -60,22 +71,22 @@ check_values(
     return ret;
 }
 
-// initialize field (no halo)
+// initialize field (no halo) as function of x,y,z
 void
 init_field(
     double *field,
-    const double value,
+    uint32_t sbx, uint32_t sby, uint32_t sbz,
     const int dimx, const int dimy, const int dimz)
 {
-#ifdef GPU_PACK
-#pragma omp target teams distribute parallel for
-#endif
     for (int k = 1; k <= dimz; k++)
     {
         for (int j = 1; j <= dimy; j++)
         {
             for (int i = 1; i <= dimx; i++)
             {
+                double rx, ry, rz;
+                scoord2realcoord(sbx, sby, sbz, i-1, j-1, k-1, &rx, &ry, &rz);
+                double value = f(rx,ry,rz);
                 int idx =
                     k * (dimy + 2) * (dimx + 2) +
                     j * (dimx + 2) + i;
@@ -83,6 +94,11 @@ init_field(
             }
         }
     }
+
+    int dim3 = (dimx + 2) * (dimy + 2) * (dimz + 2);
+#ifdef GPU_PACK
+#pragma omp target update to(field[:dim3])
+#endif
 }
 
 void
@@ -126,10 +142,6 @@ main(
 
     MPI_Init(&argc, &argv);
     MPI_Comm comm = MPI_COMM_WORLD;
-    // set muMatScale communicator to test communicator
-    mpi_comm_new = comm;
-    MPI_Comm_size(comm, &nproc);
-    MPI_Comm_rank(comm, &iproc);
 
     if (iproc == 0)
         printf("Test packing functions...\n");
@@ -148,16 +160,32 @@ main(
     if (iproc == 0)
         printf("Local array size = %d\n", dim3);
 
+    int dims[3] = { bp->gnsbz, bp->gnsby, bp->gnsbx };
+    int periods[3] = { 1, 1, 1 };
+    MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, 0, &mpi_comm_new);
+
+    MPI_Barrier(mpi_comm_new);
+    MPI_Comm_size(mpi_comm_new, &nproc);
+    MPI_Comm_rank(mpi_comm_new, &iproc);
+
+    // get coordinates of local subblock in MPI grid
+    int sb_coords[3];
+    MPI_Cart_coords(mpi_comm_new, iproc, 3, sb_coords);
+    // swap x and z value to be consistent with CA code
+    int tmp = sb_coords[0];
+    sb_coords[0] = sb_coords[2];
+    sb_coords[2] = tmp;
+
     profiler_init();
 
-    MPI_Barrier(comm);
+    MPI_Barrier(mpi_comm_new);
 
     double *field = malloc(dim3 * sizeof(double));
     int dimxy = (bp->gsdimx + 2) * (bp->gsdimy + 2);
     int dimxz = (bp->gsdimx + 2) * (bp->gsdimz + 2);
     int dimyz = (bp->gsdimy + 2) * (bp->gsdimz + 2);
 
-    // create buffers large enough
+    // create buffers large enough for all faces
     dim2 = (dimxy > dimxz) ? dimxy : dimxz;
     dim2 = (dim2 > dimyz) ? dim2 : dimyz;
     void *send_buffer[NUM_NEIGHBORS];
@@ -182,9 +210,7 @@ main(
 
     determine_3dneighbors(iproc, neighbors);
 
-    // initialize field (no halo)
-    double value = 3.33;
-
+    // local block size
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
@@ -193,24 +219,24 @@ main(
     {
         if (iproc == 0)
            printf("init_field...\n");
-        init_field(field, value, dimx, dimy, dimz);
-       if (iproc == 0)
+        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
+        if (iproc == 0)
             printf("Check FACE_TOP -> FACE_BOTTOM\n");
         // send data from face cells
         int face = FACE_TOP;
         int halo = FACE_BOTTOM;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
 
         // check field with halo values
         if (iproc == 0)
            printf("check_values()...\n");
-        ret = check_values(field, value, 1, bp->gsdimx, 1, bp->gsdimy, 0, 0);
+        ret = check_values(field, dimx, dimy, dimz,
+                           sb_coords[0], sb_coords[1], sb_coords[2], 1, dimx, 1, dimy, 0, 0);
     }
 
-    value += 1.;
     {
-        init_field(field, value, dimx, dimy, dimz);
+        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
 
         if (iproc == 0)
             printf("Check FACE_BOTTOM -> FACE_TOP\n");
@@ -218,76 +244,77 @@ main(
         int face = FACE_BOTTOM;
         int halo = FACE_TOP;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
 
         // check field with halo values
         ret +=
-            check_values(field, value, 1, bp->gsdimx, 1, bp->gsdimy,
-                         bp->gsdimz + 1, bp->gsdimz + 1);
+            check_values(field, dimx, dimy, dimz,
+                         sb_coords[0], sb_coords[1], sb_coords[2], 1, dimx, 1, dimy,
+                         dimz + 1, dimz + 1);
     }
 
-    value += 1.;
     {
-        init_field(field, value, dimx, dimy, dimz);
+        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_LEFT -> FACE_RIGHT\n");
         // send data from face cells
         int face = FACE_LEFT;
         int halo = FACE_RIGHT;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
 
         // check field with halo values
         ret +=
-            check_values(field, value, bp->gsdimx + 1, bp->gsdimx + 1, 1,
-                         bp->gsdimy, 1, bp->gsdimz);
+            check_values(field, dimx, dimy, dimz,
+                         sb_coords[0], sb_coords[1], sb_coords[2], dimx + 1, dimx + 1, 1,
+                         dimy, 1, dimz);
     }
 
-    value += 1.;
     {
-        init_field(field, value, dimx, dimy, dimz);
+        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_RIGHT -> FACE_LEFT\n");
         // send data from face cells
         int face = FACE_RIGHT;
         int halo = FACE_LEFT;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
 
         // check field with halo values
-        ret += check_values(field, value, 0, 0, 1, bp->gsdimy, 1, bp->gsdimz);
+        ret += check_values(field, dimx, dimy, dimz,
+                            sb_coords[0], sb_coords[1], sb_coords[2], 0, 0, 1, dimy, 1, dimz);
     }
 
-    value += 1.;
     {
-        init_field(field, value, dimx, dimy, dimz);
+        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_FRONT -> FACE_BACK\n");
         // send data from face cells
         int face = FACE_FRONT;
         int halo = FACE_BACK;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
 
         // check field with halo values
-        ret =
-            check_values(field, value, 1, bp->gsdimx, bp->gsdimy + 1,
-                         bp->gsdimy + 1, 1, bp->gsdimz);
+        ret +=
+            check_values(field, dimx, dimy, dimz,
+                         sb_coords[0], sb_coords[1], sb_coords[2], 1, dimx, dimy + 1,
+                         dimy + 1, 1, dimz);
     }
 
-    value += 1.;
     {
-        init_field(field, value, dimx, dimy, dimz);
+        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_BACK -> FACE_FRONT\n");
         // send data from face cells
         int face = FACE_BACK;
         int halo = FACE_FRONT;
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer, comm);
+        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
 
         // check field with halo values
-        ret = check_values(field, value, 1, bp->gsdimx, 0, 0, 1, bp->gsdimz);
+        ret += check_values(field, dimx, dimy, dimz,
+                            sb_coords[0], sb_coords[1], sb_coords[2], 1, dimx, 0, 0, 1, dimz);
     }
 
     for (int face = 0; face < NUM_NEIGHBORS; face++)
