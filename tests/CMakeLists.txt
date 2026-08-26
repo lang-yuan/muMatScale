@@ -12,6 +12,8 @@ add_executable(testHaloFill ${CMAKE_SOURCE_DIR}/tests/HaloFill/main.c
                ${CMAKE_SOURCE_DIR}/src/packing.c)
 target_link_libraries(testHaloFill PRIVATE m)
 if(${BUILD_FOR_GPU})
+  message(STATUS "Build testHaloFill with OpenMP offload")
+  target_compile_definitions(testHaloFill PRIVATE GPU_OMP)
   target_compile_definitions(testHaloFill PRIVATE GPU_PACK)
   target_link_libraries(testHaloFill PRIVATE OpenMP::OpenMP_C)
   #set_target_properties(testHaloFill PROPERTIES COMPILE_FLAGS ${EXTRA_OpenMP_C_FLAGS})

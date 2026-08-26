@@ -13,6 +13,10 @@
 #include <math.h>
 #include <assert.h>
 
+#define CELLCOORD2REALCOORD0(i) (bp->origin_offset[0]+ (i+0.5) * bp->cellSize)
+#define CELLCOORD2REALCOORD1(i) (bp->origin_offset[1]+ (i+0.5) * bp->cellSize)
+#define CELLCOORD2REALCOORD2(i) (bp->origin_offset[2]+ (i+0.5) * bp->cellSize)
+
 /**
  * Translates inside-of-subblock indicies to global cell indicies
  * \param[in] s Reference Subblock
@@ -99,3 +103,44 @@ determine_3dneighbors(
     neighbors[FACE_RIGHT] = sbID_from_sbcoords(my_x + 1, my_y, my_z);
     neighbors[FACE_LEFT] = sbID_from_sbcoords(my_x - 1, my_y, my_z);
 }
+
+/**
+ * Translates inside-of-subblock indicies to global cell coordinates
+ * \param[in] sbx,sby,sbz Reference Subblock
+ * \param[in] i index
+ * \param[in] j index
+ * \param[in] k index
+ * \param[out] x coordinate
+ * \param[out] y coordinate
+ * \param[out] z coordinate
+ */
+
+#ifdef GPU_OMP
+#pragma omp declare target
+#endif
+
+void
+scoord2realcoord(
+    uint32_t sbx,
+    uint32_t sby,
+    uint32_t sbz,
+    int i,
+    int j,
+    int k,
+    double *x,
+    double *y,
+    double *z)
+{
+    int cx = sbx * bp->gsdimx;
+    int cy = sby * bp->gsdimy;
+    int cz = sbz * bp->gsdimz;
+
+    *x = CELLCOORD2REALCOORD0(cx + i);
+    *y = CELLCOORD2REALCOORD1(cy + j);
+    *z = CELLCOORD2REALCOORD2(cz + k);
+}
+
+#ifdef GPU_OMP
+#pragma omp end declare target
+#endif
+
