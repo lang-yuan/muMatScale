@@ -40,6 +40,7 @@ check_values(
 #pragma omp target update from(field[:dim3])
 #endif
 
+    // loop over single subarray specified by i0, i1, j0, j1, k0, k1
     for (int k = k0; k <= k1; k++)
     {
         for (int j = j0; j <= j1; j++)
@@ -78,6 +79,7 @@ init_field(
     uint32_t sbx, uint32_t sby, uint32_t sbz,
     const int dimx, const int dimy, const int dimz)
 {
+    // loop over "interior" values
     for (int k = 1; k <= dimz; k++)
     {
         for (int j = 1; j <= dimy; j++)
@@ -210,16 +212,16 @@ main(
 
     determine_3dneighbors(iproc, neighbors);
 
-    // local block size
+    // local block size (without halo)
     int dimx = bp->gsdimx;
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
 
-    // check halo fill one direction at a time
+    // initialize values of field in block (without halos)
+    init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
+
+    // halo fill one face at a time
     {
-        if (iproc == 0)
-           printf("init_field...\n");
-        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_TOP -> FACE_BOTTOM\n");
         // send data from face cells
@@ -228,16 +230,9 @@ main(
 
         exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
 
-        // check field with halo values
-        if (iproc == 0)
-           printf("check_values()...\n");
-        ret = check_values(field, dimx, dimy, dimz,
-                           sb_coords[0], sb_coords[1], sb_coords[2], 1, dimx, 1, dimy, 0, 0);
     }
 
     {
-        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
-
         if (iproc == 0)
             printf("Check FACE_BOTTOM -> FACE_TOP\n");
         // send data from face cells
@@ -245,16 +240,9 @@ main(
         int halo = FACE_TOP;
 
         exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-
-        // check field with halo values
-        ret +=
-            check_values(field, dimx, dimy, dimz,
-                         sb_coords[0], sb_coords[1], sb_coords[2], 1, dimx, 1, dimy,
-                         dimz + 1, dimz + 1);
     }
 
     {
-        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_LEFT -> FACE_RIGHT\n");
         // send data from face cells
@@ -262,16 +250,9 @@ main(
         int halo = FACE_RIGHT;
 
         exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-
-        // check field with halo values
-        ret +=
-            check_values(field, dimx, dimy, dimz,
-                         sb_coords[0], sb_coords[1], sb_coords[2], dimx + 1, dimx + 1, 1,
-                         dimy, 1, dimz);
     }
 
     {
-        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_RIGHT -> FACE_LEFT\n");
         // send data from face cells
@@ -279,14 +260,9 @@ main(
         int halo = FACE_LEFT;
 
         exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-
-        // check field with halo values
-        ret += check_values(field, dimx, dimy, dimz,
-                            sb_coords[0], sb_coords[1], sb_coords[2], 0, 0, 1, dimy, 1, dimz);
     }
 
     {
-        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_FRONT -> FACE_BACK\n");
         // send data from face cells
@@ -294,16 +270,9 @@ main(
         int halo = FACE_BACK;
 
         exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-
-        // check field with halo values
-        ret +=
-            check_values(field, dimx, dimy, dimz,
-                         sb_coords[0], sb_coords[1], sb_coords[2], 1, dimx, dimy + 1,
-                         dimy + 1, 1, dimz);
     }
 
     {
-        init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
         if (iproc == 0)
             printf("Check FACE_BACK -> FACE_FRONT\n");
         // send data from face cells
@@ -311,11 +280,27 @@ main(
         int halo = FACE_FRONT;
 
         exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-
-        // check field with halo values
-        ret += check_values(field, dimx, dimy, dimz,
-                            sb_coords[0], sb_coords[1], sb_coords[2], 1, dimx, 0, 0, 1, dimz);
     }
+
+    // check values in all 6 halos
+    ret = check_values(field, dimx, dimy, dimz,
+                       sb_coords[0], sb_coords[1], sb_coords[2],
+                       1, dimx, 1, dimy, 0, 0);
+    ret += check_values(field, dimx, dimy, dimz,
+                        sb_coords[0], sb_coords[1], sb_coords[2],
+                        1, dimx, 1, dimy, dimz + 1, dimz + 1);
+    ret += check_values(field, dimx, dimy, dimz,
+                        sb_coords[0], sb_coords[1], sb_coords[2],
+                        dimx + 1, dimx + 1, 1, dimy, 1, dimz);
+    ret += check_values(field, dimx, dimy, dimz,
+                        sb_coords[0], sb_coords[1], sb_coords[2],
+                        0, 0, 1, dimy, 1, dimz);
+    ret += check_values(field, dimx, dimy, dimz,
+                        sb_coords[0], sb_coords[1], sb_coords[2],
+                        1, dimx, dimy + 1, dimy + 1, 1, dimz);
+    ret += check_values(field, dimx, dimy, dimz,
+                        sb_coords[0], sb_coords[1], sb_coords[2],
+                        1, dimx, 0, 0, 1, dimz);
 
     for (int face = 0; face < NUM_NEIGHBORS; face++)
     {
