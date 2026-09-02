@@ -26,6 +26,7 @@ message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
 
 set(src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/packing.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/variables.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/calculate.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ca_main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/checkpoint.c

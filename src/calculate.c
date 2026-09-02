@@ -26,6 +26,7 @@
 #include "face_util.h"
 #include "calculate.h"
 #include "packing.h"
+#include "variables.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -39,51 +40,9 @@ extern int gLogStateEndID;
 
 SB_struct *lsp;
 
+extern variable_registration var_regs[];
 
-typedef struct variable_registration
-{
-    MPI_Request *reqs;
-    int nreq;
-    size_t datasize;
-    // pointers to halo exchange buffer allocations
-    char *rbuf_base;
-    char *sbuf_base;
-    // max. number of elements in halo exchange buffer
-    int buffer_slot_cells;
-    // max. size in bytes for 6 halo exchange buffers
-    size_t buffer_slot_bytes;
-    void *rbuf[6];
-    void *sbuf[6];
-} variable_registration;
-
-static int var_count = 0;
-static variable_registration var_regs[1 << TAG_DATA_KEY_SHIFT];
-
-static int
-registerCommInfo(
-    size_t datasize)
-{
-    assert(var_count < (1 << TAG_DATA_KEY_SHIFT));
-    int varnum = var_count++;
-
-    variable_registration *v = &var_regs[varnum];
-    v->reqs = NULL;
-    v->nreq = 0;
-    v->datasize = datasize;
-    v->rbuf_base = NULL;
-    v->sbuf_base = NULL;
-    v->buffer_slot_cells = 0;
-    v->buffer_slot_bytes = 0;
-    for (int i = 0; i < 6; i++)
-    {
-        v->rbuf[i] = NULL;
-        v->sbuf[i] = NULL;
-    }
-    return varnum;
-}
-
-
-static void
+void
 FinishExchangeForVar(
     int variable_key, void* data)
 {
@@ -112,7 +71,7 @@ FinishExchangeForVar(
 
 }
 
-static void
+void
 ExchangeFacesForVar(
     int variable_key, void* d)
 {
