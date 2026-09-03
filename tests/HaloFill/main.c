@@ -174,6 +174,9 @@ main(
     MPI_Barrier(mpi_comm_new);
 
     double *field = malloc(dim3 * sizeof(double));
+#ifdef GPU_PACK
+#pragma omp target enter data map(alloc:field[:dim3])
+#endif
     int dimxy = (bp->gsdimx + 2) * (bp->gsdimy + 2);
     int dimxz = (bp->gsdimx + 2) * (bp->gsdimz + 2);
     int dimyz = (bp->gsdimy + 2) * (bp->gsdimz + 2);
@@ -249,6 +252,9 @@ main(
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         1, dimx, 0, 0, 1, dimz);
 
+#ifdef GPU_PACK
+#pragma omp target exit data map(delete:field[:dim3])
+#endif
     free(field);
 
     if (iproc == 0){
