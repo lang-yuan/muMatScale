@@ -59,7 +59,7 @@ typedef struct variable_registration
 static int var_count = 0;
 static variable_registration var_regs[1 << TAG_DATA_KEY_SHIFT];
 
-static int
+int
 registerCommInfo(
     size_t datasize)
 {
@@ -83,7 +83,7 @@ registerCommInfo(
 }
 
 
-static void
+void
 FinishExchangeForVar(
     int variable_key, void* data)
 {
@@ -112,7 +112,7 @@ FinishExchangeForVar(
 
 }
 
-static void
+void
 ExchangeFacesForVar(
     int variable_key, void* d)
 {

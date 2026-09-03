@@ -6,11 +6,13 @@
 #include "distribute.h"
 #include "functions.h"
 #include "profiler.h"
+#include "variables.h"
+#include "ll.h"
 
 #include <math.h>
 
-int neighbors[NUM_NEIGHBORS];
-int dim2;
+extern ll_t *gsubblock_list;
+extern SB_struct *lsp;
 
 // arbitrary, non-uniform periodic function
 double f(double x, double y, double z)
@@ -103,37 +105,6 @@ init_field(
 #endif
 }
 
-void
-exchange_data(
-    int face,
-    int halo,
-    double *field,
-    void *send_buffer[6],
-    void *recv_buffer[6],
-    MPI_Comm comm)
-{
-    int dest = neighbors[face];
-    assert(dest < nproc);
-    assert(dest >= 0);
-    int src = neighbors[halo];
-    assert(src < nproc);
-    assert(src >= 0);
-
-    MPI_Request req[2];
-
-    printf("Send_Plane...\n");
-    Send_Plane(field, sizeof(double), face, dest, 0, send_buffer, &req[0]);
-
-    Recv_Plane(field, sizeof(double), halo, src, 0, recv_buffer, &req[1]);
-
-    MPI_Status mpi_status;
-    MPI_Waitall(2, req, MPI_STATUSES_IGNORE);
-
-    // recv data in halo cells
-    printf("unpack plane...\n");
-    unpack_plane(field, sizeof(double), halo, recv_buffer);
-}
-
 int
 main(
     int argc,
@@ -149,6 +120,8 @@ main(
         printf("Test packing functions...\n");
 
     xmalloc(bp, BB_struct, 1);
+
+    profiler_init();
 
     set_defaults();
     if (iproc == 0)
@@ -178,39 +151,45 @@ main(
     sb_coords[0] = sb_coords[2];
     sb_coords[2] = tmp;
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (iproc == 0)
+    {
+        gsubblock_list = ll_init(NULL, NULL);
+        init_gmsp();
+        sendSubblockInfo();
+    }
+    recvSubblockInfo();
+
+    if (iproc == 0)
+        completeSendSubblockInfo();
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    lsp->coords.x = sb_coords[0];
+    lsp->coords.y = sb_coords[1];
+    lsp->coords.z = sb_coords[2];
+    lsp->subblockid = iproc;
+
     profiler_init();
 
     MPI_Barrier(mpi_comm_new);
 
     double *field = malloc(dim3 * sizeof(double));
+#ifdef GPU_PACK
+#pragma omp target enter data map(alloc:field[:dim3])
+#endif
     int dimxy = (bp->gsdimx + 2) * (bp->gsdimy + 2);
     int dimxz = (bp->gsdimx + 2) * (bp->gsdimz + 2);
     int dimyz = (bp->gsdimy + 2) * (bp->gsdimz + 2);
 
-    // create buffers large enough for all faces
-    dim2 = (dimxy > dimxz) ? dimxy : dimxz;
-    dim2 = (dim2 > dimyz) ? dim2 : dimyz;
-    void *send_buffer[NUM_NEIGHBORS];
-    void *recv_buffer[NUM_NEIGHBORS];
-
-    for (int face = 0; face < NUM_NEIGHBORS; face++)
-    {
-        send_buffer[face] = malloc(dim2 * sizeof(double));
-        recv_buffer[face] = malloc(dim2 * sizeof(double));
-#ifdef GPU_PACK
-        double* dbuf;
-#pragma omp target enter data map(alloc:field[:dim3])
-        dbuf = (double*)send_buffer[face];
-#pragma omp target enter data map(alloc:dbuf[:dim2])
-        dbuf = (double*)recv_buffer[face];
-#pragma omp target enter data map(alloc:dbuf[:dim2])
-#endif
-    }
-
     if (iproc == 0)
         printf("Determine neighbors...\n");
 
+    int neighbors[NUM_NEIGHBORS];
     determine_3dneighbors(iproc, neighbors);
+    for (int i = 0; i < NUM_NEIGHBORS; i++)
+    {
+        lsp->neighbors[i][0] = neighbors[i];
+    }
 
     // local block size (without halo)
     int dimx = bp->gsdimx;
@@ -218,106 +197,74 @@ main(
     int dimz = bp->gsdimz;
 
     // initialize values of field in block (without halos)
+    if (iproc == 0)
+        printf("Initialize field...\n");
     init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
 
-    // halo fill one face at a time
-    {
-        if (iproc == 0)
-            printf("Check FACE_TOP -> FACE_BOTTOM\n");
-        // send data from face cells
-        int face = FACE_TOP;
-        int halo = FACE_BOTTOM;
+    if (iproc == 0)
+        printf("Exchange data...\n");
 
-        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
+    MPI_Barrier(mpi_comm_new);
 
-    }
+    int var = registerCommInfo(sizeof(double));
+    ExchangeFacesForVar(var, field);
 
-    {
-        if (iproc == 0)
-            printf("Check FACE_BOTTOM -> FACE_TOP\n");
-        // send data from face cells
-        int face = FACE_BOTTOM;
-        int halo = FACE_TOP;
-
-        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-    }
-
-    {
-        if (iproc == 0)
-            printf("Check FACE_LEFT -> FACE_RIGHT\n");
-        // send data from face cells
-        int face = FACE_LEFT;
-        int halo = FACE_RIGHT;
-
-        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-    }
-
-    {
-        if (iproc == 0)
-            printf("Check FACE_RIGHT -> FACE_LEFT\n");
-        // send data from face cells
-        int face = FACE_RIGHT;
-        int halo = FACE_LEFT;
-
-        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-    }
-
-    {
-        if (iproc == 0)
-            printf("Check FACE_FRONT -> FACE_BACK\n");
-        // send data from face cells
-        int face = FACE_FRONT;
-        int halo = FACE_BACK;
-
-        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-    }
-
-    {
-        if (iproc == 0)
-            printf("Check FACE_BACK -> FACE_FRONT\n");
-        // send data from face cells
-        int face = FACE_BACK;
-        int halo = FACE_FRONT;
-
-        exchange_data(face, halo, field, send_buffer, recv_buffer, mpi_comm_new);
-    }
+    FinishExchangeForVar(var, field);
 
     // check values in all 6 halos
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (iproc == 0)
+        printf("Check 1st halo...\n");
     ret = check_values(field, dimx, dimy, dimz,
                        sb_coords[0], sb_coords[1], sb_coords[2],
                        1, dimx, 1, dimy, 0, 0);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (iproc == 0)
+        printf("Check 2nd halo...\n");
     ret += check_values(field, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         1, dimx, 1, dimy, dimz + 1, dimz + 1);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (iproc == 0)
+        printf("Check 3rd halo...\n");
     ret += check_values(field, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         dimx + 1, dimx + 1, 1, dimy, 1, dimz);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (iproc == 0)
+        printf("Check 4th halo...\n");
     ret += check_values(field, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         0, 0, 1, dimy, 1, dimz);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (iproc == 0)
+        printf("Check 5th halo...\n");
     ret += check_values(field, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         1, dimx, dimy + 1, dimy + 1, 1, dimz);
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (iproc == 0)
+        printf("Check 6th halo...\n");
     ret += check_values(field, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         1, dimx, 0, 0, 1, dimz);
 
-    for (int face = 0; face < NUM_NEIGHBORS; face++)
-    {
 #ifdef GPU_PACK
-        double* dbuf;
 #pragma omp target exit data map(delete:field[:dim3])
-        dbuf = (double*)send_buffer[face];
-#pragma omp target exit data map(delete:dbuf[:dim2])
-        dbuf = (double*)recv_buffer[face];
-#pragma omp target exit data map(delete:dbuf[:dim2])
 #endif
-        free(recv_buffer[face]);
-        free(send_buffer[face]);
-    }
     free(field);
 
+    if (iproc == 0){
+        ll_destroy(gsubblock_list);
+        xfree(gmsp);
+    }
+
     MPI_Finalize();
+
+    xfree(bp);
 
     return ret;
 }
