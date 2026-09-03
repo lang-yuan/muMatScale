@@ -4,7 +4,6 @@ include_directories( ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(testHaloFill ${CMAKE_SOURCE_DIR}/tests/HaloFill/main.c
                ${CMAKE_SOURCE_DIR}/src/globals.c
-               ${CMAKE_SOURCE_DIR}/src/variables.c
                ${CMAKE_SOURCE_DIR}/src/calculate.c
                ${CMAKE_SOURCE_DIR}/src/growth.c
                ${CMAKE_SOURCE_DIR}/src/grain.c
