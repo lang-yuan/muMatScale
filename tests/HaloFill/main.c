@@ -27,7 +27,7 @@ double f(double x, double y, double z)
 // check range of indices for function matching
 int
 check_values(
-    double *field,
+    double *field, const int depth,
     const int dimx, const int dimy, const int dimz,
     uint32_t sbx, uint32_t sby, uint32_t sbz,
     int i0, int i1, int j0, int j1, int k0, int k1)
@@ -39,7 +39,7 @@ check_values(
 
     int dim3 = (dimx + 2) * (dimy + 2) * (dimz + 2);
 #ifdef GPU_PACK
-#pragma omp target update from(field[:dim3])
+#pragma omp target update from(field[:depth*dim3])
 #endif
 
     // loop over single subarray specified by i0, i1, j0, j1, k0, k1
@@ -58,7 +58,8 @@ check_values(
                 scoord2realcoord(sbx, sby, sbz, i-1, j-1, k-1, &rx, &ry, &rz);
                 double value = f(rx,ry,rz);
 
-                if (fabs(field[idx] - value) > tol)
+                for (int d = 0; d < depth; d++)
+                if (fabs(field[depth*idx+d] - value) > tol)
                 {
                     printf("%d %d %d %le %le %le\n", i, j, k, rx, ry, rz);
                     printf
@@ -77,7 +78,7 @@ check_values(
 // initialize field (no halo) as function of x,y,z
 void
 init_field(
-    double *field,
+    double *field, const int depth,
     uint32_t sbx, uint32_t sby, uint32_t sbz,
     const int dimx, const int dimy, const int dimz)
 {
@@ -94,14 +95,15 @@ init_field(
                 int idx =
                     k * (dimy + 2) * (dimx + 2) +
                     j * (dimx + 2) + i;
-                field[idx] = value;
+                for (int d = 0; d < depth; d++)
+                   field[depth*idx+d] = value;
             }
         }
     }
 
     int dim3 = (dimx + 2) * (dimy + 2) * (dimz + 2);
 #ifdef GPU_PACK
-#pragma omp target update to(field[:dim3])
+#pragma omp target update to(field[:depth*dim3])
 #endif
 }
 
@@ -173,10 +175,6 @@ main(
 
     MPI_Barrier(mpi_comm_new);
 
-    double *field = malloc(dim3 * sizeof(double));
-#ifdef GPU_PACK
-#pragma omp target enter data map(alloc:field[:dim3])
-#endif
     int dimxy = (bp->gsdimx + 2) * (bp->gsdimy + 2);
     int dimxz = (bp->gsdimx + 2) * (bp->gsdimz + 2);
     int dimyz = (bp->gsdimy + 2) * (bp->gsdimz + 2);
@@ -196,17 +194,26 @@ main(
     int dimy = bp->gsdimy;
     int dimz = bp->gsdimz;
 
+for(int depth = 1; depth < 4; depth+=2)
+{
+    printf("Test depth %d\n", depth);
+
+    double *field = malloc(dim3 * depth * sizeof(double));
+#ifdef GPU_PACK
+#pragma omp target enter data map(alloc:field[:depth*dim3])
+#endif
+
     // initialize values of field in block (without halos)
     if (iproc == 0)
         printf("Initialize field...\n");
-    init_field(field, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
+    init_field(field, depth, sb_coords[0], sb_coords[1], sb_coords[2], dimx, dimy, dimz);
 
     if (iproc == 0)
         printf("Exchange data...\n");
 
     MPI_Barrier(mpi_comm_new);
 
-    int var = registerCommInfo(sizeof(double));
+    int var = registerCommInfo(depth*sizeof(double));
     ExchangeFacesForVar(var, field);
 
     FinishExchangeForVar(var, field);
@@ -215,40 +222,40 @@ main(
     MPI_Barrier(MPI_COMM_WORLD);
     if (iproc == 0)
         printf("Check 1st halo...\n");
-    ret = check_values(field, dimx, dimy, dimz,
+    ret = check_values(field, depth, dimx, dimy, dimz,
                        sb_coords[0], sb_coords[1], sb_coords[2],
                        1, dimx, 1, dimy, 0, 0);
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (iproc == 0)
         printf("Check 2nd halo...\n");
-    ret += check_values(field, dimx, dimy, dimz,
+    ret += check_values(field, depth, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         1, dimx, 1, dimy, dimz + 1, dimz + 1);
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (iproc == 0)
         printf("Check 3rd halo...\n");
-    ret += check_values(field, dimx, dimy, dimz,
+    ret += check_values(field, depth, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         dimx + 1, dimx + 1, 1, dimy, 1, dimz);
     MPI_Barrier(MPI_COMM_WORLD);
     if (iproc == 0)
         printf("Check 4th halo...\n");
-    ret += check_values(field, dimx, dimy, dimz,
+    ret += check_values(field, depth, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         0, 0, 1, dimy, 1, dimz);
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (iproc == 0)
         printf("Check 5th halo...\n");
-    ret += check_values(field, dimx, dimy, dimz,
+    ret += check_values(field, depth, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         1, dimx, dimy + 1, dimy + 1, 1, dimz);
     MPI_Barrier(MPI_COMM_WORLD);
     if (iproc == 0)
         printf("Check 6th halo...\n");
-    ret += check_values(field, dimx, dimy, dimz,
+    ret += check_values(field, depth, dimx, dimy, dimz,
                         sb_coords[0], sb_coords[1], sb_coords[2],
                         1, dimx, 0, 0, 1, dimz);
 
@@ -256,6 +263,7 @@ main(
 #pragma omp target exit data map(delete:field[:dim3])
 #endif
     free(field);
+}
 
     if (iproc == 0){
         ll_destroy(gsubblock_list);
