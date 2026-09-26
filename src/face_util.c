@@ -103,25 +103,6 @@ Recv_Plane(
     return err;
 }
 
-void
-unpack_plane(
-    void *data,
-    size_t datasize,
-    int halo,
-    void *rbuffer[6])
-{
-    assert(rbuffer[halo] != NULL);
-
-    int offset;
-    int stride;
-    int bsize;
-    int nblocks;
-    computeHaloInfo(halo, &offset, &stride, &bsize, &nblocks);
-
-    unpack_field(datasize, data, stride, bsize, nblocks, offset,
-                 rbuffer[halo]);
-}
-
 /**
  * Receives halo information, Non-Blocking
  *
