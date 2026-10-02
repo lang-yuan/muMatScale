@@ -113,14 +113,14 @@ cache_io_data()
 }
 
 void
-writeData()
+writeData(int timestep)
 {
     cache_io_data();
 
     // Write out the visualization files for each subblock
     if (iproc == 0)
-        writeMain();
-    writeSubblocks();
+        writeMain(timestep);
+    writeSubblocks(timestep);
 
     MPI_Barrier(mpi_comm_new);
     profile(PROF_OUTPUT);
@@ -198,7 +198,7 @@ loop(
 
     if (bp->data_write_freq > 0 && !restart)
     {
-        writeData();
+        writeData(bp->timestep);
     }
 
     if (bp->screenpfreq > 0 && iproc == 0)
@@ -238,7 +238,7 @@ loop(
             if (bp->data_write_freq > 0
                 && bp->timestep % bp->data_write_freq == 0)
             {
-                writeData();
+                writeData(bp->timestep);
             }
 
         if (bp->checkpointfreq > 0 && bp->timestep % bp->checkpointfreq == 0)
@@ -252,7 +252,7 @@ loop(
     // Output final solution (only if we haven't already)
     if (bp->data_write_freq > 0 && !(bp->timestep % bp->data_write_freq == 0))
     {
-        writeData();
+        writeData(bp->timestep);
     }
 
     output_grains(lsp);
