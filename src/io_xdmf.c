@@ -542,15 +542,15 @@ xdmf_prepareIO(
 
 void
 xdmf_writeMain(
-    void)
+    int timestep)
 {
     assert(iproc == 0);
 
     // Create the XML (XMDF) file
 #ifdef WRITE_TIMESTEPED_XMF
-    writeXDMF(bp->timestep);
+    writeXDMF(timestep);
 #endif
-    writeXDMFTimeSeries(bp->timestep);
+    writeXDMFTimeSeries(timestep);
 
     writeGlobalHeavyData();
 }
@@ -558,13 +558,13 @@ xdmf_writeMain(
 
 void
 xdmf_writeSubblocks(
-    void)
+    int timestep)
 {
-    hid_t file_id = H5Fcreate(get_rank_file(iproc, bp->timestep),
+    hid_t file_id = H5Fcreate(get_rank_file(iproc, timestep),
                               H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     if (file_id < 0)
         error("Unable to open HDF5 file %s (Error code: %ld\n",
-              get_rank_file(iproc, bp->timestep), file_id);
+              get_rank_file(iproc, timestep), file_id);
 
     hsize_t start[3] = { 1, 1, 1 };
     hsize_t sbdims[3];
