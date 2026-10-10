@@ -103,25 +103,6 @@ Recv_Plane(
     return err;
 }
 
-void
-unpack_plane(
-    void *data,
-    size_t datasize,
-    int halo,
-    void *rbuffer[6])
-{
-    assert(rbuffer[halo] != NULL);
-
-    int offset;
-    int stride;
-    int bsize;
-    int nblocks;
-    computeHaloInfo(halo, &offset, &stride, &bsize, &nblocks);
-
-    unpack_field(datasize, data, stride, bsize, nblocks, offset,
-                 rbuffer[halo]);
-}
-
 /**
  * Receives halo information, Non-Blocking
  *
@@ -200,8 +181,8 @@ Send_Plane(
     int nblocks;
     int err = 0;
 
+    (void)data;
     computeFaceInfo(face, &offset, &stride, &bsize, &nblocks);
-    pack_field(datasize, data, stride, bsize, nblocks, offset, sbuffer[face]);
     int sizeb = bsize * nblocks * datasize;
 
     void *temp = sbuffer[face];
@@ -241,10 +222,36 @@ SendFacesNB(
     size_t datasize,
     int connMap[][2],
     void *sbuf[6],
+    int buffer_slot_cells,
     MPI_Request * reqs)
 {
     int n_req = 0;
     int err = 0;
+    int faces[NUM_NEIGHBORS];
+    int offsets[NUM_NEIGHBORS];
+    int strides[NUM_NEIGHBORS];
+    int bsizes[NUM_NEIGHBORS];
+    int nblocks[NUM_NEIGHBORS];
+    int face_count = 0;
+
+    for (int face = 0; face < NUM_NEIGHBORS; face++)
+    {
+        int rank = connMap[face][0];
+        // A rank of less than 0 means that it isn't assigned
+        if (rank >= 0 && rank != iproc)
+        {
+            faces[face_count] = face;
+            computeFaceInfo(face, &offsets[face_count], &strides[face_count],
+                            &bsizes[face_count], &nblocks[face_count]);
+            face_count++;
+        }
+    }
+
+    if (face_count > 0)
+    {
+        pack_faces_field(datasize, data, face_count, faces, strides, bsizes,
+                         nblocks, offsets, buffer_slot_cells, sbuf[0]);
+    }
 
     for (int face = 0; face < NUM_NEIGHBORS; face++)
     {
@@ -290,11 +297,13 @@ SendRecvHalosNB(
     int connMap[][2],
     void *sbuf[6],
     void *rbuf[6],
+    int buffer_slot_cells,
     MPI_Request * reqs)
 {
     int n_req = 0;
     n_req += RecvHalosNB(data, data_key, datasize, connMap, rbuf, &reqs[0]);
-    n_req += SendFacesNB(data, data_key, datasize, connMap, sbuf, &reqs[n_req]);
+    n_req += SendFacesNB(data, data_key, datasize, connMap, sbuf,
+                         buffer_slot_cells, &reqs[n_req]);
 
     return n_req;
 }

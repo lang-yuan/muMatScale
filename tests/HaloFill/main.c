@@ -222,7 +222,7 @@ for(int depth = 1; depth < 4; depth+=2)
     MPI_Barrier(MPI_COMM_WORLD);
     if (iproc == 0)
         printf("Check 1st halo...\n");
-    ret = check_values(field, depth, dimx, dimy, dimz,
+    ret += check_values(field, depth, dimx, dimy, dimz,
                        sb_coords[0], sb_coords[1], sb_coords[2],
                        1, dimx, 1, dimy, 0, 0);
 

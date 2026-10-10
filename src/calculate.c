@@ -100,14 +100,31 @@ FinishExchangeForVar(
 
       // unpack received data
       SB_struct *s = lsp;
+      int faces[NUM_NEIGHBORS];
+      int offsets[NUM_NEIGHBORS];
+      int strides[NUM_NEIGHBORS];
+      int bsizes[NUM_NEIGHBORS];
+      int nblocks[NUM_NEIGHBORS];
+      int face_count = 0;
+
       for (int face = 0; face < NUM_NEIGHBORS; face++)
       {
         int rank = s->neighbors[face][0];
         // A rank of less than 0 means that it isn't assigned
         if (rank >= 0 && rank != iproc)
         {
-            unpack_plane(data, v->datasize, face, v->rbuf);
+            faces[face_count] = face;
+            computeHaloInfo(face, &offsets[face_count], &strides[face_count],
+                            &bsizes[face_count], &nblocks[face_count]);
+            face_count++;
         }
+      }
+
+      if (face_count > 0)
+      {
+        unpack_faces_field(v->datasize, data, face_count, faces, strides,
+                           bsizes, nblocks, offsets, v->buffer_slot_cells,
+                           v->rbuf[0]);
       }
 
 }
@@ -153,13 +170,15 @@ ExchangeFacesForVar(
         {
             v->rbuf[face] = v->rbuf_base + face * v->buffer_slot_bytes;
             v->sbuf[face] = v->sbuf_base + face * v->buffer_slot_bytes;
+        }
+
+        /* Halo buffers are scratch. Avoid copying host memset bytes to device. */
 #ifdef GPU_PACK
         char *rbuf_base = v->rbuf_base;
         char *sbuf_base = v->sbuf_base;
 #pragma omp target enter data map(alloc:rbuf_base[0:buffer_bytes])
 #pragma omp target enter data map(alloc:sbuf_base[0:buffer_bytes])
 #endif
-        }
     }
 
     timing(COMPUTATION, timer_elapsed());
@@ -174,7 +193,7 @@ ExchangeFacesForVar(
 
         v->nreq = SendRecvHalosNB(d, variable_key, v->datasize,
                                   s->neighbors, v->sbuf, v->rbuf,
-                                  &v->reqs[0]);
+                                  v->buffer_slot_cells, &v->reqs[0]);
     }
     profile(FACE_EXCHNG_REMOTE_SEND);
     timing(COMPUTATION, timer_elapsed());

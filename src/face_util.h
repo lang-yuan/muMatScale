@@ -63,6 +63,7 @@ int SendRecvHalosNB(
     int connMap[][2],
     void *sbuf[6],
     void *rbuf[6],
+    int buffer_slot_cells,
     MPI_Request * reqs);
 
 void unpack_plane(
