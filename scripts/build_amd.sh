@@ -1,10 +1,12 @@
 #!/bin/bash -l
 module load PrgEnv-amd/8.7.0
-module load rocm
+module load amd/7.0.2
+module load rocm/7.0.2
 module load craype-accel-amd-gfx90a
-module load cray-hdf5
-module load cmake
-module load cray-pmi
+module load cray-hdf5/1.14.3.9
+module load zlib/1.3.2
+module load cmake/3.31.11
+module load cray-pmi/6.1.17
 
 rm -rf build
 mkdir build
