@@ -153,13 +153,14 @@ ExchangeFacesForVar(
         {
             v->rbuf[face] = v->rbuf_base + face * v->buffer_slot_bytes;
             v->sbuf[face] = v->sbuf_base + face * v->buffer_slot_bytes;
+        }
+
 #ifdef GPU_PACK
         char *rbuf_base = v->rbuf_base;
         char *sbuf_base = v->sbuf_base;
 #pragma omp target enter data map(alloc:rbuf_base[0:buffer_bytes])
 #pragma omp target enter data map(alloc:sbuf_base[0:buffer_bytes])
 #endif
-        }
     }
 
     timing(COMPUTATION, timer_elapsed());
